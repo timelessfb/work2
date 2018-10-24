@@ -31,10 +31,11 @@ def getInitialPopulation(sr, rbsc, populationSize):
         # 随机产生一个染色体
         chromosome = np.zeros((m, n), dtype=int)
         rbsc_realtime = np.array(rbsc)
+        flag_of_matrix = 1
         # 产生一个染色体矩阵中的其中一行
         for j in range(m):
             # 随机探查,基站数/2 次分配
-            flag = 0
+            flag_of_row = 0
             for k in range(math.ceil(n / 2)):
                 bs_of_select = random.randint(0, n - 1)
                 if sr[j][0] < rbsc_realtime[bs_of_select][0] and sr[j][1] < rbsc_realtime[bs_of_select][1] and sr[j][
@@ -43,10 +44,10 @@ def getInitialPopulation(sr, rbsc, populationSize):
                     rbsc_realtime[bs_of_select][0] -= sr[j][0]
                     rbsc_realtime[bs_of_select][1] -= sr[j][1]
                     rbsc_realtime[bs_of_select][2] -= sr[j][2]
-                    flag = 1
+                    flag_of_row = 1
                     break
             # 随机探查失败，则遍历所有基站,找到一个有足够资源可以映射的基站
-            if flag == 0:
+            if flag_of_row == 0:
                 for bs_of_select in range(n):
                     if sr[j][0] < rbsc_realtime[bs_of_select][0] and sr[j][1] < rbsc_realtime[bs_of_select][1] and \
                             sr[j][2] < rbsc_realtime[bs_of_select][2]:
@@ -56,10 +57,13 @@ def getInitialPopulation(sr, rbsc, populationSize):
                         rbsc_realtime[bs_of_select][2] -= sr[j][2]
                         flag = 1
                         break
-            if flag == 0:
-                continue  ##################################
+            if flag_of_row == 0:
+                flag_of_matrix = 0
+                break  ##################################
+
         # 将产生的染色体加入到chromosomes_list中
-        chromosomes_list.append(chromosome)
+        if flag_of_matrix == 1:
+            chromosomes_list.append(chromosome)
     chromosomes = np.array(chromosomes_list)
     return chromosomes
 
@@ -229,15 +233,19 @@ def ga(SR, RBSC, max_iter=500, delta=0.0001, pc=0.8, pm=0.01, populationSize=10)
     # 得到初始种群编码
     chromosomes = getInitialPopulation(SR, RBSC, populationSize)
     populationSize = np.shape(chromosomes)
-    if populationSize == 0:
+    if populationSize[0] == 0:
         print("failed")
-        return
+        return "failed", 0
     for iteration in range(max_iter):
         # 得到个体适应度值和个体的累积概率
         fitness = getFitnessValue(SR, RBSC, chromosomes, delta)
         # 选择新的种群
         cum_proba = fitness[:, 5]
-        newpopulations = selectNewPopulation(chromosomes, cum_proba)
+        try:
+            newpopulations = selectNewPopulation(chromosomes, cum_proba)
+        except:
+            print("except:")
+            print(chromosomes)
         # 进行交叉操作
         crossoverpopulation = crossover(SR, RBSC, newpopulations, pc)
         # mutation
@@ -279,7 +287,7 @@ if __name__ == '__main__':
     pm = 0.01
     populationSize = 20
     # 构造10次请求
-    request_num = 10
+    request_num = 20
     values = np.zeros((request_num), dtype=np.float)
     solutions = []
     for iter in range(request_num):
@@ -302,17 +310,18 @@ if __name__ == '__main__':
         solutions.append(np.copy(solution))
         #################
         print("#################")
-        m, n = np.shape(solution)
-        chromosomes = np.zeros((1, m, n))
-        chromosomes[0] = solution
-        f1 = sum(solution)
-        print("number of support each bs:", f1)
-        new_rbsc = update_rbsc(sr, rbsc, solution)
-        print("new_rbsc:")
-        print(new_rbsc)
-        f = getFitnessValue(sr, rbsc, chromosomes, delta)
-        print(f)
-        print("#################")
+        if solution != "failed":
+            m, n = np.shape(solution)
+            chromosomes = np.zeros((1, m, n))
+            chromosomes[0] = solution
+            f1 = sum(solution)
+            print("number of support each bs:", f1)
+            new_rbsc = update_rbsc(sr, rbsc, solution)
+            print("new_rbsc:")
+            print(new_rbsc)
+            f = getFitnessValue(sr, rbsc, chromosomes, delta)
+            print(f)
+            print("#################")
         #################
         rbsc = update_rbsc(sr, rbsc, solution)
     print("总结果")
