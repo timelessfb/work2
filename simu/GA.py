@@ -5,6 +5,8 @@ import math
 import numpy as np
 import random
 
+import simu.greedy
+
 
 def check(sr, rbsc, chromosome):
     m = np.size(sr, 0)
@@ -338,7 +340,7 @@ if __name__ == '__main__':
             except:
                 print("except in main:", sr)
         if solution == "failed" or np.size(sr, 0) == 0:
-            break
+            continue
         print('最优目标函数值:', value)
         values[iter] = value
         print('solution:')
@@ -362,15 +364,3 @@ if __name__ == '__main__':
         rbsc = update_rbsc(sr, rbsc, solution)
     print("总结果")
     print(values)
-
-    # ##验证
-    # m, n = np.shape(solution)
-    # chromosomes = np.zeros((1, m, n))
-    # chromosomes[0] = solution
-    # f1 = sum(solution)
-    # print("number of support each bs:", f1)
-    # new_rbsc = update_rbsc(SR, RBSC, solution)
-    # print("new_rbsc:")
-    # print(new_rbsc)
-    # f = getFitnessValue(SR, RBSC, chromosomes, delta)
-    # print(f)

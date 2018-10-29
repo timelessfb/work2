@@ -305,6 +305,7 @@ def ga(SR, RBSC, max_iter=500, delta=0.0001, pc=0.8, pm=0.01, populationSize=10)
     return optimalSolution, optimalValue
 
 
+'''这个版本不同于GAv3的地方在于第350行'''
 if __name__ == '__main__':
     # BSC：base station capacity
     # RBSC: residuary base station capacity
