@@ -28,8 +28,9 @@ def getInitialPopulation(sr, rbsc, populationSize, delta=0.000000001):
     m = np.size(sr, 0)
     n = np.size(rbsc, 0)
     chromosomes_list = []
-    cost_all, rbsc_realtime, solution = greedy.greedy_min_cost(sr, rbsc, delta)
-    chromosomes_list.append(solution)
+    cost, rbsc_realtime, solution = greedy.greedy_min_cost(sr, rbsc, delta)
+    if sum(sum(solution)) == m:
+        chromosomes_list.append(solution)
     for i in range(populationSize):
         # 随机产生一个染色体
         chromosome = np.zeros((m, n), dtype=int)
