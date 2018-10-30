@@ -4,7 +4,7 @@
 import math
 import numpy as np
 import random
-import simu.greedy
+import simu.greedy as greedy
 
 
 def check(sr, rbsc, chromosome):
@@ -24,10 +24,12 @@ def check(sr, rbsc, chromosome):
 
 
 # 那么一个个体应该用M * N的数组表示(要求：每一行只有一个1，每一列请求的资源不能超过基站剩余资源)，所有数组应该有L*M*N大小的矩阵表示
-def getInitialPopulation(sr, rbsc, populationSize):
+def getInitialPopulation(sr, rbsc, populationSize, delta=0.000000001):
     m = np.size(sr, 0)
     n = np.size(rbsc, 0)
     chromosomes_list = []
+    cost_all, rbsc_realtime, solution = greedy.greedy_min_cost(sr, rbsc, delta)
+    chromosomes_list.append(solution)
     for i in range(populationSize):
         # 随机产生一个染色体
         chromosome = np.zeros((m, n), dtype=int)
@@ -311,7 +313,7 @@ if __name__ == '__main__':
         [[1 / 16, 5 / 16, 10 / 16], [1 / 16, 10 / 16, 5 / 16], [5 / 16, 1 / 16, 10 / 16], [5 / 16, 10 / 16, 1 / 16],
          [10 / 16, 1 / 16, 5 / 16], [10 / 16, 5 / 16, 1 / 16]])
     max_iter = 500
-    delta = 0.0001
+    delta = 0.000000001
     pc = 0.8
     pm = 0.01
     populationSize = 20
@@ -319,9 +321,10 @@ if __name__ == '__main__':
     request_num = 20
     values = np.zeros((request_num), dtype=np.float)
     solutions = []
+    sr_all = []
     for iter in range(request_num):
         # 随机构造每次请求的切片数
-        m = random.randint(8, 10)
+        m = random.randint(18, 20)
         sr = np.zeros((m, 3), dtype=np.float)
         # 构造m个切片请求
         for i in range(m):
@@ -331,6 +334,7 @@ if __name__ == '__main__':
         print(rbsc)
         print("sr:")
         print(sr)
+        sr_all.append(sr)  # 记录请求，为其他算法提供相同的请求环境
         solution, value = ga(sr, rbsc, max_iter, delta, pc, pm, populationSize)
         while solution == "failed" and np.size(sr, 0) >= 2:
             sr = sr[0:np.size(sr, 0) - 1, :]
@@ -346,5 +350,15 @@ if __name__ == '__main__':
         print(solution)
         solutions.append(np.copy(solution))
         rbsc = update_rbsc(sr, rbsc, solution)
-    print("总结果")
+    print("ga总结果")
     print(values)
+    ###########################################################################################################
+    rbsc = np.array(BSC)
+    cost_all = 0
+    for i in range(request_num):
+        sr = sr_all[i]
+        cost, rbsc, solution = greedy.greedy_min_cost(sr, rbsc, delta)
+        values[i] = cost
+    print("greedy_min_cost总结果")
+    print(values)
+    print(rbsc)

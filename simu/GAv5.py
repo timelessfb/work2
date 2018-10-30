@@ -4,7 +4,7 @@
 import math
 import numpy as np
 import random
-import simu.greedy
+import simu.greedy as greedy
 
 
 def check(sr, rbsc, chromosome):
@@ -319,9 +319,10 @@ if __name__ == '__main__':
     request_num = 20
     values = np.zeros((request_num), dtype=np.float)
     solutions = []
+    sr_all = []
     for iter in range(request_num):
         # 随机构造每次请求的切片数
-        m = random.randint(8, 10)
+        m = random.randint(18, 20)
         sr = np.zeros((m, 3), dtype=np.float)
         # 构造m个切片请求
         for i in range(m):
@@ -331,6 +332,7 @@ if __name__ == '__main__':
         print(rbsc)
         print("sr:")
         print(sr)
+        sr_all.append(sr)  # 记录请求，为其他算法提供相同的请求环境
         solution, value = ga(sr, rbsc, max_iter, delta, pc, pm, populationSize)
         while solution == "failed" and np.size(sr, 0) >= 2:
             sr = sr[0:np.size(sr, 0) - 1, :]
@@ -346,5 +348,15 @@ if __name__ == '__main__':
         print(solution)
         solutions.append(np.copy(solution))
         rbsc = update_rbsc(sr, rbsc, solution)
-    print("总结果")
+    print("ga总结果")
     print(values)
+    ###########################################################################################################
+    rbsc = np.array(BSC)
+    cost_all = 0
+    for i in range(request_num):
+        sr = sr_all[i]
+        cost, rbsc, solution = greedy.greedy_min_cost(sr, rbsc, delta)
+        values[i] = cost
+    print("greedy_min_cost总结果")
+    print(values)
+    print(rbsc)
