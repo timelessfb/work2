@@ -29,6 +29,7 @@ def getInitialPopulation(sr, rbsc, populationSize, delta=0.000000001):
     n = np.size(rbsc, 0)
     chromosomes_list = []
     cost, rbsc_realtime, solution = greedy.greedy_min_cost(sr, rbsc, delta)
+    # if sum(sum(solution)) == m and check(sr, rbsc, solution):
     if sum(sum(solution)) == m:
         chromosomes_list.append(solution)
     for i in range(populationSize):

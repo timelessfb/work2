@@ -3,10 +3,11 @@ import sys
 
 import numpy as np
 import random
+import simu.GA as ga
 
 
 def check(s, rbsc, bs):
-    if s[0] < rbsc[bs][0] and s[1] < rbsc[bs][1] and s[2] < rbsc[bs][2]:
+    if s[0] <= rbsc[bs][0] and s[1] <= rbsc[bs][1] and s[2] <= rbsc[bs][2]:
         return True
     else:
         return False
@@ -34,7 +35,7 @@ def greedy_min_cost(sr, rbsc, delta):
             rbsc_realtime[min_index][0] -= s[0]
             rbsc_realtime[min_index][1] -= s[1]
             rbsc_realtime[min_index][2] -= s[2]
-        solution[i][min_index] = 1
+            solution[i][min_index] = 1
     return cost_all, rbsc_realtime, solution
 
 
