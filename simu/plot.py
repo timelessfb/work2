@@ -30,6 +30,22 @@ l2, = ax1.plot(times, tcgm, 'go-')
 l3, = ax1.plot(times, bcgm, 'b+-')
 ax1.set_xlabel('时间窗口(秒)')
 ax1.set_ylabel('映射代价')
-ax1.set_title('title')
+ax1.set_title('切片映射代价')
 plt.legend(handles=[l1, l2, l3], labels=['gabm', 'tcgm', 'bcgm'], loc='best')
+
+# 子图
+left, bottom, width, height = 0.2, 0.6, 0.25, 0.25
+ax2 = fig.add_axes([left, bottom, width, height])
+n = int(n / 4)
+gabm = gabm[0:n]
+tcgm = tcgm[0:n]
+bcgm = bcgm[0:n]
+times = np.linspace(0, n - 1, n)
+l11, = ax2.plot(times, gabm, 'rx-')
+l22, = ax2.plot(times, tcgm, 'go-')
+l33, = ax2.plot(times, bcgm, 'b+-')
+ax2.set_xlabel('时间窗口(秒)')
+ax2.set_ylabel('映射代价')
+ax2.set_title('切片映射代价')
+
 plt.show()
