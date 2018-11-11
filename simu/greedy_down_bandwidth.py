@@ -13,7 +13,7 @@ def check(s, rbsc, bs):
         return False
 
 
-def greedy_min_bandwidth_cost(sr, rbsc, delta):
+def greedy_min_down_bandwidth_cost(sr, rbsc, delta):
     m = np.size(sr, 0)
     n = np.size(rbsc, 0)
     rbsc_realtime = np.array(rbsc)
@@ -25,7 +25,7 @@ def greedy_min_bandwidth_cost(sr, rbsc, delta):
         min_index = -1
         for bs in range(n):
             if check(s, rbsc_realtime, bs):
-                cost = s[0] / (rbsc_realtime[bs][0] + delta) + s[1] / (rbsc_realtime[bs][1] + delta)
+                cost = s[0] / (rbsc_realtime[bs][0] + delta)
                 if cost < min_cost:
                     min_index = bs
                     min_cost = cost

@@ -1,13 +1,15 @@
 #!usr/bin/env python
 # -*- coding:utf-8 -*-
 
-# 稳定版
+# 稳定版，添加中间数据的持久化
 import math
 import numpy as np
 import random
 import simu.greedy as greedy
 import simu.greedy_bandwidth as greedy_bandwidth
 import simu.greedy_computing as greedy_computing
+import simu.greedy_down_bandwidth as greedy_down_bandwidth
+import simu.greedy_up_bandwidth as greedy_up_bandwidth
 import json
 
 
@@ -316,6 +318,12 @@ def ga(SR, RBSC, max_iter=500, delta=0.0001, pc=0.8, pm=0.01, populationSize=10)
 
 
 if __name__ == '__main__':
+    # 持久化数据
+    fp1 = open('result_ga.json', 'w')
+    fp2 = open('result_greedy.json', 'w')
+    fp3 = open('result_greedy_down.json', 'w')
+    fp4 = open('result_greedy_up.json', 'w')
+    fp5 = open('result_greedy_compute.json', 'w')
     # BSC：base station capacity
     # RBSC: residuary base station capacity
     # SR: slice request
@@ -332,7 +340,7 @@ if __name__ == '__main__':
     # 模拟一组切片请求,包含几类，如带宽密集型、计算密集型，size为M
     SR_MODEL = np.array([[1, 5, 25], [1, 25, 5], [5, 1, 25], [5, 25, 1], [25, 1, 5], [25, 5, 1]], dtype=np.float)
     SR_MODEL = SR_MODEL / 31
-    max_iter = 5000  # ------------------------
+    max_iter = 2000  # ------------------------
     delta = 0.000000001
     pc = 0.8
     pm = 0.01
@@ -369,6 +377,13 @@ if __name__ == '__main__':
         values[iter] = value
         print('solution:')
         print(solution)
+        ##############################
+        # 持久化结果
+        fit = getFitnessValue(sr, rbsc, [solution], delta)
+        o = [fit[0, 0], fit[0, 1], fit[0, 2], fit[0, 3]]
+        result = {iter: o}
+        json.dump(result, fp1)
+        ##############################
         solutions.append(np.copy(solution))
         rbsc = update_rbsc(sr, rbsc, solution)
     print("ga总结果")
@@ -381,6 +396,13 @@ if __name__ == '__main__':
         sr = sr_all[i]
         cost, rbsc, solution = greedy.greedy_min_cost(sr, rbsc, delta)
         values[i] = cost
+        ##############################
+        # 持久化结果
+        fit = getFitnessValue(sr, rbsc, [solution], delta)
+        o = [fit[0, 0], fit[0, 1], fit[0, 2], fit[0, 3]]
+        result = {i: o}
+        json.dump(result, fp2)
+        ##############################
     print("greedy_min_cost总结果")
     print(values)
     print(rbsc)
@@ -389,9 +411,33 @@ if __name__ == '__main__':
     cost_all = 0
     for i in range(request_num):
         sr = sr_all[i]
-        cost, rbsc, solution = greedy_bandwidth.greedy_min_bandwidth_cost(sr, rbsc, delta)
+        cost, rbsc, solution = greedy_down_bandwidth.greedy_min_down_bandwidth_cost(sr, rbsc, delta)
         values[i] = cost
-    print("greedy_min_bandwidth_cost总结果")
+        ##############################
+        # 持久化结果
+        fit = getFitnessValue(sr, rbsc, [solution], delta)
+        o = [fit[0, 0], fit[0, 1], fit[0, 2], fit[0, 3]]
+        result = {i: o}
+        json.dump(result, fp3)
+        ##############################
+    print("greedy_min_down_bandwidth_cost总结果")
+    print(values)
+    print(rbsc)
+    ##############################################################################################################
+    rbsc = np.array(BSC)
+    cost_all = 0
+    for i in range(request_num):
+        sr = sr_all[i]
+        cost, rbsc, solution = greedy_up_bandwidth.greedy_min_up_bandwidth_cost(sr, rbsc, delta)
+        values[i] = cost
+        ##############################
+        # 持久化结果
+        fit = getFitnessValue(sr, rbsc, [solution], delta)
+        o = [fit[0, 0], fit[0, 1], fit[0, 2], fit[0, 3]]
+        result = {i: o}
+        json.dump(result, fp4)
+        ##############################
+    print("greedy_min_up_bandwidth_cost总结果")
     print(values)
     print(rbsc)
     ##############################################################################################################
@@ -400,7 +446,19 @@ if __name__ == '__main__':
     for i in range(request_num):
         sr = sr_all[i]
         cost, rbsc, solution = greedy_computing.greedy_min_compute_cost(sr, rbsc, delta)
+        ##############################
+        # 持久化结果
+        fit = getFitnessValue(sr, rbsc, [solution], delta)
+        o = [fit[0, 0], fit[0, 1], fit[0, 2], fit[0, 3]]
+        result = {i: o}
+        json.dump(result, fp5)
+        ##############################
         values[i] = cost
-    print("greedy_min_bandwidth_cost总结果")
+    print("greedy_min_compute_cost总结果")
     print(values)
     print(rbsc)
+    fp1.close()
+    fp2.close()
+    fp3.close()
+    fp4.close()
+    fp5.close()
