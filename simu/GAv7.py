@@ -1,6 +1,6 @@
 #!usr/bin/env python
 # -*- coding:utf-8 -*-
-
+# 稳定版本
 import math
 import numpy as np
 import random
