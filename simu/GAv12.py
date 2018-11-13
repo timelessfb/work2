@@ -1,6 +1,5 @@
 #!usr/bin/env python
 # -*- coding:utf-8 -*-
-
 # 稳定版，添加中间数据的持久化，网络高负载情况
 import math
 import numpy as np
@@ -333,11 +332,11 @@ def getRbsc(bs_num, iter):
 
 if __name__ == '__main__':
     # 持久化数据
-    fp1 = open('g_result_ga2.json', 'w')
-    fp2 = open('g_result_greedy2.json', 'w')
-    fp3 = open('g_result_greedy_down2.json', 'w')
-    fp4 = open('g_result_greedy_up2.json', 'w')
-    fp5 = open('g_result_greedy_compute2.json', 'w')
+    fp1 = open('GAv12_result_ga2.json', 'w')
+    fp2 = open('GAv12_result_greedy2.json', 'w')
+    fp3 = open('GAv12_result_greedy_down2.json', 'w')
+    fp4 = open('GAv12_result_greedy_up2.json', 'w')
+    fp5 = open('GAv12_result_greedy_compute2.json', 'w')
     bs_num = 6
     # BSC：base station capacity
     # RBSC: residuary base station capacity
@@ -355,7 +354,7 @@ if __name__ == '__main__':
     # 模拟一组切片请求,包含几类，如带宽密集型、计算密集型，size为M
     # SR_MODEL = np.array([[1, 5, 25], [1, 25, 5], [5, 1, 25], [5, 25, 1], [25, 1, 5], [25, 5, 1]], dtype=np.float)
     # SR_MODEL = SR_MODEL / 31
-    max_iter = 50000  # ------------------------
+    max_iter = 20000  # ------------------------
     delta = 0.000000001
     pc = 0.8
     pm = 0.01
@@ -384,14 +383,28 @@ if __name__ == '__main__':
         print(sr)
         sr_all.append(sr)  # 记录请求，为其他算法提供相同的请求环境
         solution, value = ga(sr, rbsc, max_iter, delta, pc, pm, populationSize)
+
+        # 资源紧张的时候，采用greedy算法，得到可以满足的情况
         while solution == "failed" and np.size(sr, 0) >= 2:
-            sr = sr[0:np.size(sr, 0) - 1, :]
-            try:
-                solution, value = ga(sr, rbsc, max_iter, delta, pc, pm, populationSize)
-            except:
-                print("except in main:", sr)
+            cost, rbsc_r, solution = greedy.greedy_min_cost(sr, rbsc, delta)
+            x = np.sum(solution, 1)
+            sr_list = []
+            for s in range(np.size(x)):
+                if x[s] == 1:
+                    sr_list.append(sr[s])
+            sr = np.array(sr_list)
+            solution, value = ga(sr, rbsc, max_iter, delta, pc, pm, populationSize)
         if solution == "failed" or np.size(sr, 0) == 0:
             continue
+
+        # while solution == "failed" and np.size(sr, 0) >= 2:
+        #     sr = sr[0:np.size(sr, 0) - 1, :]
+        #     try:
+        #         solution, value = ga(sr, rbsc, max_iter, delta, pc, pm, populationSize)
+        #     except:
+        #         print("except in main:", sr)
+        # if solution == "failed" or np.size(sr, 0) == 0:
+        #     continue
         print('最优目标函数值:', value)
         values[iter] = value
         print('solution:')
