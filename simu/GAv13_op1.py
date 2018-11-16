@@ -2,8 +2,6 @@
 # -*- coding:utf-8 -*-
 # 稳定版，添加中间数据的持久化，网络高负载情况，增加记录拒绝服务的请求数
 import math
-import time
-
 import numpy as np
 import random
 import simu.greedy as greedy
@@ -11,10 +9,7 @@ import simu.greedy_computing as greedy_computing
 import simu.greedy_down_bandwidth as greedy_down_bandwidth
 import simu.greedy_up_bandwidth as greedy_up_bandwidth
 import simu.greedy_resource as greedy_resource
-import simu.RandomSelect as random_select
 import json
-
-import simu.plot as pt
 
 
 def check(sr, rbsc, chromosome):
@@ -43,35 +38,31 @@ def getInitialPopulation(sr, rbsc, populationSize, delta=0.000000001):
     n = np.size(rbsc, 0)
     chromosomes_list = []
     ####################################################################################
-    cost, rbsc_realtime, solution = greedy_resource.greedy_min_cost(sr, rbsc, delta)
-    if sum(sum(solution)) == m and check(sr, rbsc, solution):
-        if sum(sum(solution)) == m:
-            chromosomes_list.append(solution)
-            populationSize -= 1
-
-    cost, rbsc_realtime, solution = greedy.greedy_min_cost(sr, rbsc, delta)
-    if sum(sum(solution)) == m and check(sr, rbsc, solution):
-        if sum(sum(solution)) == m:
-            chromosomes_list.append(solution)
-            populationSize -= 1
-
-    cost, rbsc_realtime, solution = greedy_down_bandwidth.greedy_min_down_bandwidth_cost(sr, rbsc, delta)
-    if sum(sum(solution)) == m and check(sr, rbsc, solution):
-        if sum(sum(solution)) == m:
-            chromosomes_list.append(solution)
-            populationSize -= 1
-
-    cost, rbsc_realtime, solution = greedy_up_bandwidth.greedy_min_up_bandwidth_cost(sr, rbsc, delta)
-    if sum(sum(solution)) == m and check(sr, rbsc, solution):
-        if sum(sum(solution)) == m:
-            chromosomes_list.append(solution)
-            populationSize -= 1
-    cost, rbsc_realtime, solution = greedy_computing.greedy_min_compute_cost(sr, rbsc, delta)
-    if sum(sum(solution)) == m and check(sr, rbsc, solution):
-        if sum(sum(solution)) == m:
-            chromosomes_list.append(solution)
-            populationSize -= 1
-
+    # cost, rbsc_realtime, solution = greedy_resource.greedy_min_cost(sr, rbsc, delta)
+    # if sum(sum(solution)) == m and check(sr, rbsc, solution):
+    #     if sum(sum(solution)) == m:
+    #         chromosomes_list.append(solution)
+    #         populationSize -= 1
+    # cost, rbsc_realtime, solution = greedy.greedy_min_cost(sr, rbsc, delta)
+    # if sum(sum(solution)) == m and check(sr, rbsc, solution):
+    #     if sum(sum(solution)) == m:
+    #         chromosomes_list.append(solution)
+    #         populationSize -= 1
+    # cost, rbsc_realtime, solution = greedy_down_bandwidth.greedy_min_down_bandwidth_cost(sr, rbsc, delta)
+    # if sum(sum(solution)) == m and check(sr, rbsc, solution):
+    #     if sum(sum(solution)) == m:
+    #         chromosomes_list.append(solution)
+    #         populationSize -= 1
+    # cost, rbsc_realtime, solution = greedy_up_bandwidth.greedy_min_up_bandwidth_cost(sr, rbsc, delta)
+    # if sum(sum(solution)) == m and check(sr, rbsc, solution):
+    #     if sum(sum(solution)) == m:
+    #         chromosomes_list.append(solution)
+    #         populationSize -= 1
+    # cost, rbsc_realtime, solution = greedy_computing.greedy_min_compute_cost(sr, rbsc, delta)
+    # if sum(sum(solution)) == m and check(sr, rbsc, solution):
+    #     if sum(sum(solution)) == m:
+    #         chromosomes_list.append(solution)
+    #         populationSize -= 1
     ####################################################################################
     for i in range(populationSize):
         # 随机产生一个染色体
@@ -316,18 +307,12 @@ def ga(SR, RBSC, max_iter=500, delta=0.0001, pc=0.8, pm=0.01, populationSize=10)
     population_num = np.size(chromosomes, 0)
     if population_num == 0:
         return "failed", -1
-
-    fitness = getFitnessValue(SR, RBSC, chromosomes, delta)
-    optimalValues.append(np.min(list(fitness[:, 3])))
-    index = np.where(fitness[:, 3] == min(list(fitness[:, 3])))
-    optimalSolutions.append(chromosomes[index[0][0], :, :])
-
     for iteration in range(max_iter):
         # 得到个体适应度值和个体的累积概率
         fitness = getFitnessValue(SR, RBSC, chromosomes, delta)
-        # optimalValues.append(np.min(list(fitness[:, 3])))
-        # index = np.where(fitness[:, 3] == min(list(fitness[:, 3])))
-        # optimalSolutions.append(chromosomes[index[0][0], :, :])
+        optimalValues.append(np.min(list(fitness[:, 3])))
+        index = np.where(fitness[:, 3] == min(list(fitness[:, 3])))
+        optimalSolutions.append(chromosomes[index[0][0], :, :])
         # 选择新的种群
         cum_proba = fitness[:, 5]
         try:
@@ -357,35 +342,45 @@ def ga(SR, RBSC, max_iter=500, delta=0.0001, pc=0.8, pm=0.01, populationSize=10)
 
 def getRbsc(bs_num, iter):
     rbsc = np.zeros((bs_num, 3), dtype=np.float)
-    alpha = 3 - math.log(iter + 1, 4)  # -------------------------
-    # alpha = 3  # -------------------------
+    alpha = 4 - math.log(iter + 1, 4)
     for i in range(bs_num):
         down = random.uniform(0, 1)
         up = random.uniform(0, 1)
         compute = random.uniform(0, 1)
         sum = down + up + compute
-        rbsc[i][0] = 3 * alpha * (down / sum)  # ---------------3可以调整
-        rbsc[i][1] = 3 * alpha * (up / sum)
-        rbsc[i][2] = 3 * alpha * (compute / sum)
+        rbsc[i][0] = 4 * alpha * (down / sum)  # ---------------3可以调整
+        rbsc[i][1] = 4 * alpha * (up / sum)
+        rbsc[i][2] = 4 * alpha * (compute / sum)
     # rbsc = 3 * rbsc / sum(rbsc)
     return rbsc
 
 
 if __name__ == '__main__':
     # 持久化数据
-    nowTime = lambda: int(round(time.time() * 1000))
-    fp1 = open('GAv13_best_result_ga.json' + str(nowTime()), 'w')
-    fp2 = open('GAv13_best_result_greedy.json' + str(nowTime()), 'w')
-    fp3 = open('GAv13_best_result_greedy_down.json' + str(nowTime()), 'w')
-    fp4 = open('GAv13_best_result_greedy_up.json' + str(nowTime()), 'w')
-    fp5 = open('GAv13_best_result_greedy_compute.json' + str(nowTime()), 'w')
-    fp6 = open('GAv13_best_result_greedy_resource.json' + str(nowTime()), 'w')
-    fp7 = open('GAv13_best_result_random.json' + str(nowTime()), 'w')
+    fp1 = open('GAv13_op1_result_ga.json', 'w')
+    fp2 = open('GAv13_op1_result_greedy.json', 'w')
+    fp3 = open('GAv13_op1_result_greedy_down.json', 'w')
+    fp4 = open('GAv13_op1_result_greedy_up.json', 'w')
+    fp5 = open('GAv13_op1_result_greedy_compute.json', 'w')
+    fp6 = open('GAv13_op1_result_greedy_resource.json', 'w')
     bs_num = 6
     # BSC：base station capacity
     # RBSC: residuary base station capacity
     # SR: slice request
-    max_iter = 100000  # ------------------------
+    # 模拟3个基站，每个基站拥有1000的带宽能力，1000的计算能力，size为N
+    # BSC = np.array([[10, 10, 10], [10, 10, 10], [10, 10, 10], [10, 10, 10], [10, 10, 10], [10, 10, 10]], dtype=np.float)
+    # 初始时，只有剩余矩阵就是整个基站的资源
+    # BSC = BSC / 1  # -------------------------------
+    # rbsc = np.array(BSC)
+    # # 模拟一组切片请求,包含几类，如带宽密集型、计算密集型，size为M
+    # SR_MODEL = np.array(
+    #     [[1 / 16, 5 / 16, 10 / 16], [1 / 16, 10 / 16, 5 / 16], [5 / 16, 1 / 16, 10 / 16], [5 / 16, 10 / 16, 1 / 16],
+    #      [10 / 16, 1 / 16, 5 / 16], [10 / 16, 5 / 16, 1 / 16]])
+
+    # 模拟一组切片请求,包含几类，如带宽密集型、计算密集型，size为M
+    # SR_MODEL = np.array([[1, 5, 25], [1, 25, 5], [5, 1, 25], [5, 25, 1], [25, 1, 5], [25, 5, 1]], dtype=np.float)
+    # SR_MODEL = SR_MODEL / 31
+    max_iter = 20000  # ------------------------
     delta = 0.000000001
     pc = 0.8
     pm = 0.01
@@ -397,12 +392,10 @@ if __name__ == '__main__':
     sr_all = []
     rbscs = []
     # 每轮处理请求失败的切片请求数，fails[0]是遗传、fails[1]是贪心总代价、fails[2]是贪心下行带宽、fails[3]是贪心上行带宽、fails[4]是贪心计算资源
-    fails = np.zeros((7, request_num))
-    # 记录7中算法每次迭代得到下行，上行，计算，总代价
-    cost_result = np.zeros((7, request_num, 4), dtype=np.float)
+    fails = np.zeros((6, request_num))
     for iter in range(request_num):
         # 随机构造每次请求的切片数
-        m = 10  # -----------------------------
+        m = random.randint(9, 11)  # -----------------------------
         # 构造m个切片请求
         sr = np.zeros((m, 3), dtype=np.float)
         for i in range(m):
@@ -422,37 +415,15 @@ if __name__ == '__main__':
         # 资源紧张的时候，采用greedy算法，得到可以满足的情况
         while solution == "failed" and np.size(sr, 0) >= 2:
             cost, rbsc_r, solution = greedy.greedy_min_cost(sr, rbsc, delta)
-            x1 = np.sum(solution, 1)  # 求每行之和
-
-            cost, rbsc_r, solution = greedy_resource.greedy_min_cost(sr, rbsc, delta)
-            x2 = np.sum(solution, 1)  # 求每行之和
-
-            cost, rbsc_r, solution = greedy_down_bandwidth.greedy_min_down_bandwidth_cost(sr, rbsc, delta)
-            x3 = np.sum(solution, 1)  # 求每行之和
-
-            cost, rbsc_r, solution = greedy_up_bandwidth.greedy_min_up_bandwidth_cost(sr, rbsc, delta)
-            x4 = np.sum(solution, 1)  # 求每行之和
-
-            cost, rbsc_r, solution = greedy_computing.greedy_min_compute_cost(sr, rbsc, delta)
-            x5 = np.sum(solution, 1)  # 求每行之和
-            XX = np.array((x1, x2, x3, x4, x5))
-            X = np.array((np.sum(x1), np.sum(x2), np.sum(x3), np.sum(x4), np.sum(x5)))
-            x = np.max(X)
-            if x == 0:
-                solution == "failed"
-                value = 0
-                sr = np.array([])
-                break
-            index = np.where(X == x)
-            x = XX[index[0][0]]
+            x = np.sum(solution, 1)
             sr_list = []
             for s in range(np.size(x)):
                 if x[s] == 1:
                     sr_list.append(sr[s])
             sr = np.array(sr_list)
             solution, value = ga(sr, rbsc, max_iter, delta, pc, pm, populationSize)
-        # if solution == "failed" or np.size(sr, 0) == 0:
-        #     continue
+        if solution == "failed" or np.size(sr, 0) == 0:
+            continue
         # 记录失败数目
         fails[0][iter] = np.size(sr_all[iter], 0) - np.size(sr, 0)
 
@@ -472,10 +443,6 @@ if __name__ == '__main__':
         # 持久化结果
         fit = getFitnessValue(sr, rbsc, [solution], delta)
         o = [fit[0, 0], fit[0, 1], fit[0, 2], fit[0, 3]]
-        cost_result[0][iter][0] = fit[0, 0]
-        cost_result[0][iter][1] = fit[0, 1]
-        cost_result[0][iter][2] = fit[0, 2]
-        cost_result[0][iter][3] = fit[0, 3]
         result = {iter: o}
         json.dump(result, fp1)
         ##############################
@@ -496,10 +463,6 @@ if __name__ == '__main__':
         # 持久化结果
         fit = getFitnessValue(sr, rbscs[i], [solution], delta)
         o = [fit[0, 0], fit[0, 1], fit[0, 2], fit[0, 3]]
-        cost_result[1][i][0] = fit[0, 0]
-        cost_result[1][i][1] = fit[0, 1]
-        cost_result[1][i][2] = fit[0, 2]
-        cost_result[1][i][3] = fit[0, 3]
         result = {i: o}
         json.dump(result, fp2)
         ##############################
@@ -517,10 +480,6 @@ if __name__ == '__main__':
         # 持久化结果
         fit = getFitnessValue(sr, rbscs[i], [solution], delta)
         o = [fit[0, 0], fit[0, 1], fit[0, 2], fit[0, 3]]
-        cost_result[2][i][0] = fit[0, 0]
-        cost_result[2][i][1] = fit[0, 1]
-        cost_result[2][i][2] = fit[0, 2]
-        cost_result[2][i][3] = fit[0, 3]
         result = {i: o}
         json.dump(result, fp3)
         ##############################
@@ -538,10 +497,6 @@ if __name__ == '__main__':
         # 持久化结果
         fit = getFitnessValue(sr, rbscs[i], [solution], delta)
         o = [fit[0, 0], fit[0, 1], fit[0, 2], fit[0, 3]]
-        cost_result[3][i][0] = fit[0, 0]
-        cost_result[3][i][1] = fit[0, 1]
-        cost_result[3][i][2] = fit[0, 2]
-        cost_result[3][i][3] = fit[0, 3]
         result = {i: o}
         json.dump(result, fp4)
         ##############################
@@ -559,10 +514,6 @@ if __name__ == '__main__':
         # 持久化结果
         fit = getFitnessValue(sr, rbscs[i], [solution], delta)
         o = [fit[0, 0], fit[0, 1], fit[0, 2], fit[0, 3]]
-        cost_result[4][i][0] = fit[0, 0]
-        cost_result[4][i][1] = fit[0, 1]
-        cost_result[4][i][2] = fit[0, 2]
-        cost_result[4][i][3] = fit[0, 3]
         result = {i: o}
         json.dump(result, fp5)
         ##############################
@@ -580,10 +531,6 @@ if __name__ == '__main__':
         # 持久化结果
         fit = getFitnessValue(sr, rbscs[i], [solution], delta)
         o = [fit[0, 0], fit[0, 1], fit[0, 2], fit[0, 3]]
-        cost_result[5][i][0] = fit[0, 0]
-        cost_result[5][i][1] = fit[0, 1]
-        cost_result[5][i][2] = fit[0, 2]
-        cost_result[5][i][3] = fit[0, 3]
         result = {i: o}
         json.dump(result, fp6)
         ##############################
@@ -592,36 +539,10 @@ if __name__ == '__main__':
     print("greedy_min_max_cost总结果")
     print(values)
     ##############################################################################################################
-    for i in range(request_num):
-        sr = sr_all[i]
-        rbsc = rbscs[i]
-        cost, rbsc, solution = random_select.random_select(sr, rbsc, delta)
-        values[i] = cost
-        ##############################
-        # 持久化结果
-        fit = getFitnessValue(sr, rbscs[i], [solution], delta)
-        o = [fit[0, 0], fit[0, 1], fit[0, 2], fit[0, 3]]
-        cost_result[6][i][0] = fit[0, 0]
-        cost_result[6][i][1] = fit[0, 1]
-        cost_result[6][i][2] = fit[0, 2]
-        cost_result[6][i][3] = fit[0, 3]
-        result = {i: o}
-        json.dump(result, fp7)
-        ##############################
-        # 记录失败数
-        fails[6][i] = np.size(sr, 0) - np.sum(np.sum(solution, 0), 0)
-    print("random总结果")
-    print(values)
-    ##############################################################################################################
     print(fails)
-    pt.plot_fun(cost_result[:, :, 0], fails, request_num, '切片请求数量（个）', '平均下行带宽映射代价', '下行带宽映射代价')
-    pt.plot_fun(cost_result[:, :, 1], fails, request_num, '切片请求数量（个）', '平均上行带宽映射代价', '上行带宽映射代价')
-    pt.plot_fun(cost_result[:, :, 2], fails, request_num, '切片请求数量（个）', '平均计算资源映射代价', '计算资源映射代价')
-    pt.plot_fun(cost_result[:, :, 3], fails, request_num, '切片请求数量（个）', '平均总映射代价', '总映射代价')
     fp1.close()
     fp2.close()
     fp3.close()
     fp4.close()
     fp5.close()
     fp6.close()
-    fp7.close()

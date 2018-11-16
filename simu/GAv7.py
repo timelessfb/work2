@@ -5,7 +5,11 @@ import math
 import numpy as np
 import random
 import simu.greedy as greedy
-import simu.greedy_bandwidth as greedy_bandwidth
+import simu.greedy_computing as greedy_computing
+import simu.greedy_down_bandwidth as greedy_down_bandwidth
+import simu.greedy_up_bandwidth as greedy_up_bandwidth
+import simu.greedy_resource as greedy_resource
+import json
 
 
 def check(sr, rbsc, chromosome):
@@ -29,10 +33,10 @@ def getInitialPopulation(sr, rbsc, populationSize, delta=0.000000001):
     m = np.size(sr, 0)
     n = np.size(rbsc, 0)
     chromosomes_list = []
-    cost, rbsc_realtime, solution = greedy.greedy_min_cost(sr, rbsc, delta)
-    # if sum(sum(solution)) == m and check(sr, rbsc, solution):
-    if sum(sum(solution)) == m:
-        chromosomes_list.append(solution)
+    # cost, rbsc_realtime, solution = greedy.greedy_min_cost(sr, rbsc, delta)
+    # # if sum(sum(solution)) == m and check(sr, rbsc, solution):
+    # if sum(sum(solution)) == m:
+    #     chromosomes_list.append(solution)
     for i in range(populationSize):
         # 随机产生一个染色体
         chromosome = np.zeros((m, n), dtype=int)
@@ -319,11 +323,11 @@ if __name__ == '__main__':
     # 模拟一组切片请求,包含几类，如带宽密集型、计算密集型，size为M
     SR_MODEL = np.array([[1, 5, 25], [1, 25, 5], [5, 1, 25], [5, 25, 1], [25, 1, 5], [25, 5, 1]], dtype=np.float)
     SR_MODEL = SR_MODEL / 31
-    max_iter = 1000
+    max_iter = 10000
     delta = 0.000000001
     pc = 0.8
     pm = 0.01
-    populationSize = 20
+    populationSize = 50
     # 构造10次请求
     request_num = 20
     values = np.zeros((request_num), dtype=np.float)
@@ -343,12 +347,18 @@ if __name__ == '__main__':
         print(sr)
         sr_all.append(sr)  # 记录请求，为其他算法提供相同的请求环境
         solution, value = ga(sr, rbsc, max_iter, delta, pc, pm, populationSize)
+        # 资源紧张的时候，采用greedy算法，得到可以满足的情况
         while solution == "failed" and np.size(sr, 0) >= 2:
-            sr = sr[0:np.size(sr, 0) - 1, :]
-            try:
-                solution, value = ga(sr, rbsc, max_iter, delta, pc, pm, populationSize)
-            except:
-                print("except in main:", sr)
+            cost, rbsc_r, solution = greedy.greedy_min_cost(sr, rbsc, delta)
+            x = np.sum(solution, 1)
+            sr_list = []
+            for s in range(np.size(x)):
+                if x[s] == 1:
+                    sr_list.append(sr[s])
+            sr = np.array(sr_list)
+            if np.size(sr, 0) == 0:
+                break
+            solution, value = ga(sr, rbsc, max_iter, delta, pc, pm, populationSize)
         if solution == "failed" or np.size(sr, 0) == 0:
             continue
         print('最优目标函数值:', value)
@@ -365,18 +375,89 @@ if __name__ == '__main__':
     cost_all = 0
     for i in range(request_num):
         sr = sr_all[i]
-        cost, rbsc, solution = greedy.greedy_min_cost(sr, rbsc, delta)
+        cost, rbsc, solution = greedy_resource.greedy_min_cost(sr, rbsc, delta)
         values[i] = cost
     print("greedy_min_cost总结果")
     print(values)
     print(rbsc)
     ##############################################################################################################
+
+    ###########################################################################################################
+    # rbsc = np.array(BSC)
+    # cost_all = 0
     rbsc = np.array(BSC)
-    cost_all = 0
     for i in range(request_num):
         sr = sr_all[i]
-        cost, rbsc, solution = greedy_bandwidth.greedy_min_bandwidth_cost(sr, rbsc, delta)
+        # rbsc = rbscs[i]
+        cost, rbsc, solution = greedy.greedy_min_cost(sr, rbsc, delta)
         values[i] = cost
-    print("greedy_min_bandwidth_cost总结果")
+        ##############################
+        # 持久化结果
+        fit = getFitnessValue(sr, rbsc, [solution], delta)
+        o = [fit[0, 0], fit[0, 1], fit[0, 2], fit[0, 3]]
+        result = {i: o}
+        # json.dump(result, fp2)
+        ##############################
+        # 记录失败数
+        # fails[1][i] = np.size(sr, 0) - np.sum(np.sum(solution, 0), 0)
+    print("greedy_min_cost总结果")
     print(values)
     print(rbsc)
+    ##############################################################################################################
+    rbsc = np.array(BSC)
+    for i in range(request_num):
+        sr = sr_all[i]
+        # rbsc = rbscs[i]
+        cost, rbsc, solution = greedy_down_bandwidth.greedy_min_down_bandwidth_cost(sr, rbsc, delta)
+        values[i] = cost
+        ##############################
+        # 持久化结果
+        fit = getFitnessValue(sr, rbsc, [solution], delta)
+        o = [fit[0, 0], fit[0, 1], fit[0, 2], fit[0, 3]]
+        result = {i: o}
+        # json.dump(result, fp3)
+        ##############################
+        # 记录失败数
+        # fails[2][i] = np.size(sr, 0) - np.sum(np.sum(solution, 0), 0)
+    print("greedy_min_down_bandwidth_cost总结果")
+    print(values)
+    print(rbsc)
+    ##############################################################################################################
+    rbsc = np.array(BSC)
+    for i in range(request_num):
+        sr = sr_all[i]
+        # rbsc = rbscs[i]
+        cost, rbsc, solution = greedy_up_bandwidth.greedy_min_up_bandwidth_cost(sr, rbsc, delta)
+        values[i] = cost
+        ##############################
+        # 持久化结果
+        fit = getFitnessValue(sr, rbsc, [solution], delta)
+        o = [fit[0, 0], fit[0, 1], fit[0, 2], fit[0, 3]]
+        result = {i: o}
+        # json.dump(result, fp4)
+        ##############################
+        # 记录失败数
+        # fails[3][i] = np.size(sr, 0) - np.sum(np.sum(solution, 0), 0)
+    print("greedy_min_up_bandwidth_cost总结果")
+    print(values)
+    print(rbsc)
+    ##############################################################################################################
+    rbsc = np.array(BSC)
+    for i in range(request_num):
+        sr = sr_all[i]
+        # rbsc = rbscs[i]
+        cost, rbsc, solution = greedy_computing.greedy_min_compute_cost(sr, rbsc, delta)
+        values[i] = cost
+        ##############################
+        # 持久化结果
+        fit = getFitnessValue(sr, rbsc, [solution], delta)
+        o = [fit[0, 0], fit[0, 1], fit[0, 2], fit[0, 3]]
+        result = {i: o}
+        # json.dump(result, fp5)
+        ##############################
+        # 记录失败数
+        # fails[4][i] = np.size(sr, 0) - np.sum(np.sum(solution, 0))
+    print("greedy_min_compute_cost总结果")
+    print(values)
+    print(rbsc)
+    ##############################################################################################################

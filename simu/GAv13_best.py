@@ -14,8 +14,6 @@ import simu.greedy_resource as greedy_resource
 import simu.RandomSelect as random_select
 import json
 
-import simu.plot as pt
-
 
 def check(sr, rbsc, chromosome):
     m = np.size(sr, 0)
@@ -358,7 +356,7 @@ def ga(SR, RBSC, max_iter=500, delta=0.0001, pc=0.8, pm=0.01, populationSize=10)
 def getRbsc(bs_num, iter):
     rbsc = np.zeros((bs_num, 3), dtype=np.float)
     alpha = 3 - math.log(iter + 1, 4)  # -------------------------
-    # alpha = 3  # -------------------------
+    alpha = 3  # -------------------------
     for i in range(bs_num):
         down = random.uniform(0, 1)
         up = random.uniform(0, 1)
@@ -385,7 +383,7 @@ if __name__ == '__main__':
     # BSC：base station capacity
     # RBSC: residuary base station capacity
     # SR: slice request
-    max_iter = 100000  # ------------------------
+    max_iter = 5000  # ------------------------
     delta = 0.000000001
     pc = 0.8
     pm = 0.01
@@ -398,8 +396,6 @@ if __name__ == '__main__':
     rbscs = []
     # 每轮处理请求失败的切片请求数，fails[0]是遗传、fails[1]是贪心总代价、fails[2]是贪心下行带宽、fails[3]是贪心上行带宽、fails[4]是贪心计算资源
     fails = np.zeros((7, request_num))
-    # 记录7中算法每次迭代得到下行，上行，计算，总代价
-    cost_result = np.zeros((7, request_num, 4), dtype=np.float)
     for iter in range(request_num):
         # 随机构造每次请求的切片数
         m = 10  # -----------------------------
@@ -472,10 +468,6 @@ if __name__ == '__main__':
         # 持久化结果
         fit = getFitnessValue(sr, rbsc, [solution], delta)
         o = [fit[0, 0], fit[0, 1], fit[0, 2], fit[0, 3]]
-        cost_result[0][iter][0] = fit[0, 0]
-        cost_result[0][iter][1] = fit[0, 1]
-        cost_result[0][iter][2] = fit[0, 2]
-        cost_result[0][iter][3] = fit[0, 3]
         result = {iter: o}
         json.dump(result, fp1)
         ##############################
@@ -496,10 +488,6 @@ if __name__ == '__main__':
         # 持久化结果
         fit = getFitnessValue(sr, rbscs[i], [solution], delta)
         o = [fit[0, 0], fit[0, 1], fit[0, 2], fit[0, 3]]
-        cost_result[1][i][0] = fit[0, 0]
-        cost_result[1][i][1] = fit[0, 1]
-        cost_result[1][i][2] = fit[0, 2]
-        cost_result[1][i][3] = fit[0, 3]
         result = {i: o}
         json.dump(result, fp2)
         ##############################
@@ -517,10 +505,6 @@ if __name__ == '__main__':
         # 持久化结果
         fit = getFitnessValue(sr, rbscs[i], [solution], delta)
         o = [fit[0, 0], fit[0, 1], fit[0, 2], fit[0, 3]]
-        cost_result[2][i][0] = fit[0, 0]
-        cost_result[2][i][1] = fit[0, 1]
-        cost_result[2][i][2] = fit[0, 2]
-        cost_result[2][i][3] = fit[0, 3]
         result = {i: o}
         json.dump(result, fp3)
         ##############################
@@ -538,10 +522,6 @@ if __name__ == '__main__':
         # 持久化结果
         fit = getFitnessValue(sr, rbscs[i], [solution], delta)
         o = [fit[0, 0], fit[0, 1], fit[0, 2], fit[0, 3]]
-        cost_result[3][i][0] = fit[0, 0]
-        cost_result[3][i][1] = fit[0, 1]
-        cost_result[3][i][2] = fit[0, 2]
-        cost_result[3][i][3] = fit[0, 3]
         result = {i: o}
         json.dump(result, fp4)
         ##############################
@@ -559,10 +539,6 @@ if __name__ == '__main__':
         # 持久化结果
         fit = getFitnessValue(sr, rbscs[i], [solution], delta)
         o = [fit[0, 0], fit[0, 1], fit[0, 2], fit[0, 3]]
-        cost_result[4][i][0] = fit[0, 0]
-        cost_result[4][i][1] = fit[0, 1]
-        cost_result[4][i][2] = fit[0, 2]
-        cost_result[4][i][3] = fit[0, 3]
         result = {i: o}
         json.dump(result, fp5)
         ##############################
@@ -580,10 +556,6 @@ if __name__ == '__main__':
         # 持久化结果
         fit = getFitnessValue(sr, rbscs[i], [solution], delta)
         o = [fit[0, 0], fit[0, 1], fit[0, 2], fit[0, 3]]
-        cost_result[5][i][0] = fit[0, 0]
-        cost_result[5][i][1] = fit[0, 1]
-        cost_result[5][i][2] = fit[0, 2]
-        cost_result[5][i][3] = fit[0, 3]
         result = {i: o}
         json.dump(result, fp6)
         ##############################
@@ -601,10 +573,6 @@ if __name__ == '__main__':
         # 持久化结果
         fit = getFitnessValue(sr, rbscs[i], [solution], delta)
         o = [fit[0, 0], fit[0, 1], fit[0, 2], fit[0, 3]]
-        cost_result[6][i][0] = fit[0, 0]
-        cost_result[6][i][1] = fit[0, 1]
-        cost_result[6][i][2] = fit[0, 2]
-        cost_result[6][i][3] = fit[0, 3]
         result = {i: o}
         json.dump(result, fp7)
         ##############################
@@ -614,10 +582,6 @@ if __name__ == '__main__':
     print(values)
     ##############################################################################################################
     print(fails)
-    pt.plot_fun(cost_result[:, :, 0], fails, request_num, '切片请求数量（个）', '平均下行带宽映射代价', '下行带宽映射代价')
-    pt.plot_fun(cost_result[:, :, 1], fails, request_num, '切片请求数量（个）', '平均上行带宽映射代价', '上行带宽映射代价')
-    pt.plot_fun(cost_result[:, :, 2], fails, request_num, '切片请求数量（个）', '平均计算资源映射代价', '计算资源映射代价')
-    pt.plot_fun(cost_result[:, :, 3], fails, request_num, '切片请求数量（个）', '平均总映射代价', '总映射代价')
     fp1.close()
     fp2.close()
     fp3.close()

@@ -360,7 +360,7 @@ if __name__ == '__main__':
     pm = 0.01
     populationSize = 50
     # 构造request_num次请求
-    request_num = 30  # --------------------------
+    request_num = 25  # --------------------------
     values = np.zeros((request_num), dtype=np.float)
     solutions = []
     sr_all = []
