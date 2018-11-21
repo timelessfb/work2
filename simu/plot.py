@@ -120,13 +120,11 @@ enfont = fm.FontProperties(fname='C:\Windows\Fonts\\times.ttf')
 
 def plot_fun(cost, fails, req_num_eachtime, xlabel, ylabel, title):
     fig = plt.figure()
-    print(cost[0, :])
     y1 = np.cumsum(cost[0, :])
     y2 = np.cumsum(cost[2, :])
     y3 = np.cumsum(cost[3, :])
     y4 = np.cumsum(cost[4, :])
     y5 = np.cumsum(cost[6, :])
-
     e1 = np.cumsum(req_num_eachtime - fails[0, :])
     e2 = np.cumsum(req_num_eachtime - fails[2, :])
     e3 = np.cumsum(req_num_eachtime - fails[3, :])
@@ -141,7 +139,7 @@ def plot_fun(cost, fails, req_num_eachtime, xlabel, ylabel, title):
 
     n = len(y1)
     x = np.linspace(0, n - 1, n)
-    x = [10 * (i + 1) for i in x]
+    x = [req_num_eachtime * (i + 1) for i in x]
     left, bottom, width, height = 0.1, 0.1, 0.8, 0.8
     ax1 = fig.add_axes([left, bottom, width, height])
 
@@ -154,5 +152,101 @@ def plot_fun(cost, fails, req_num_eachtime, xlabel, ylabel, title):
     ax1.set_ylabel(ylabel, fontproperties=zhfont)
     ax1.set_title(title, fontproperties=zhfont)
     plt.legend(handles=[l1, l2, l3, l4, l5], labels=['gabm', 'greedy_down', 'greedy_up', 'greedy_compute', 'random'],
+               loc='best', prop=enfont)
+    plt.savefig(title)
+
+
+def plot_fun_slot(cost, fails, req_num_deta_eachtime, xlabel, ylabel, title):
+    fig = plt.figure()
+    n = np.size(cost[0, :])
+    success = np.zeros((n), dtype=np.int)
+    for i in range(n):
+        success[i] = req_num_deta_eachtime * (i + 1)
+
+    y1 = cost[0, :]
+    y2 = cost[2, :]
+    y3 = cost[4, :]
+    y4 = cost[6, :]
+    # y5 = cost[6, :]
+    e1 = success - fails[0, :]
+    e2 = success - fails[2, :]
+    e3 = success - fails[4, :]
+    e4 = success - fails[6, :]
+    # e5 = success - fails[6, :]
+
+    y1 = y1 / e1
+    y2 = y2 / e2
+    y3 = y3 / e3
+    y4 = y4 / e4
+    # y5 = y5 / e5
+    x = success
+
+    x = np.r_[0, x]
+    y1 = np.r_[0, y1]
+    y2 = np.r_[0, y2]
+    y3 = np.r_[0, y3]
+    y4 = np.r_[0, y4]
+    # y5 = np.r_[0, y5]
+
+    left, bottom, width, height = 0.1, 0.1, 0.8, 0.8
+    ax1 = fig.add_axes([left, bottom, width, height])
+
+    l1, = ax1.plot(x, y1, color='y', marker='d', markerfacecolor='w', linestyle=':')
+    l2, = ax1.plot(x, y2, color='g', marker='x', markerfacecolor='w', linestyle='-.')
+    l3, = ax1.plot(x, y3, color='b', marker='^', markerfacecolor='w', linestyle='-.')
+    l4, = ax1.plot(x, y4, color='c', marker='+', markerfacecolor='w', linestyle='-.')
+    # l5, = ax1.plot(x, y5, color='y', marker='o', markerfacecolor='w', linestyle='--')
+    ax1.set_xlabel(xlabel, fontproperties=zhfont)
+    ax1.set_ylabel(ylabel, fontproperties=zhfont)
+    # ax1.set_xticks(x)
+    title += 'slot'
+    ax1.set_title(title, fontproperties=zhfont)
+    plt.legend(handles=[l1, l2, l3, l4], labels=['gabm', 'greedy_bandwidth', 'greedy_compute', 'random'],
+               loc='best', prop=enfont)
+    plt.savefig(title)
+
+
+def plot_fun_fail_slot(fails, req_num_deta_eachtime, xlabel, ylabel, title):
+    fig = plt.figure()
+    n = np.size(fails[0, :])
+    success = np.zeros((n), dtype=np.int)
+    for i in range(n):
+        success[i] = req_num_deta_eachtime * (i + 1)
+
+    y1 = fails[0, :]
+    y2 = fails[2, :]
+    y3 = fails[4, :]
+    y4 = fails[6, :]
+    # y5 = fails[6, :]
+
+    y1 = 100 * (y1 / success)
+    y2 = 100 * (y2 / success)
+    y3 = 100 * (y3 / success)
+    y4 = 100 * (y4 / success)
+    # y5 = 100 * (y5 / success)
+
+    x = success
+
+    x = np.r_[0, x]
+    y1 = np.r_[0, y1]
+    y2 = np.r_[0, y2]
+    y3 = np.r_[0, y3]
+    y4 = np.r_[0, y4]
+    # y5 = np.r_[0, y5]
+
+    left, bottom, width, height = 0.1, 0.1, 0.8, 0.8
+    ax1 = fig.add_axes([left, bottom, width, height])
+
+    l1, = ax1.plot(x, y1, color='y', marker='d', markerfacecolor='w', linestyle=':')
+    l2, = ax1.plot(x, y2, color='g', marker='x', markerfacecolor='w', linestyle='-.')
+    l3, = ax1.plot(x, y3, color='b', marker='^', markerfacecolor='w', linestyle='-.')
+    l4, = ax1.plot(x, y4, color='c', marker='+', markerfacecolor='w', linestyle='-.')
+    # l5, = ax1.plot(x, y5, color='y', marker='o', markerfacecolor='w', linestyle='--')
+
+    ax1.set_xlabel(xlabel, fontproperties=zhfont)
+    ax1.set_ylabel(ylabel, fontproperties=zhfont)
+    title += 'slot'
+    ax1.set_title(title, fontproperties=zhfont)
+    plt.legend(handles=[l1, l2, l3, l4], labels=['gabm', 'greedy_bandwidth', 'greedy_compute', 'random'],
                loc='best', prop=enfont)
     plt.savefig(title)

@@ -355,44 +355,24 @@ def ga(SR, RBSC, max_iter=500, delta=0.0001, pc=0.8, pm=0.01, populationSize=10)
     return optimalSolution, optimalValue
 
 
-def getRbsc(bs_num, iter):
+def getRbsc(bs_num):
     rbsc = np.zeros((bs_num, 3), dtype=np.float)
-    # alpha = 3 - math.log(iter + 1, 6)  # -------------------------
-    alpha = 3  # -------------------------
-    for i in range(bs_num):
-        down = random.uniform(0, 1)
-        up = random.uniform(0, 1)
-        compute = random.uniform(0, 1)
-        sum = down + up + compute
-        rbsc[i][0] = 3 * alpha * (down / sum)  # ---------------3可以调整
-        rbsc[i][1] = 3 * alpha * (up / sum)
-        rbsc[i][2] = 3 * alpha * (compute / sum)
-    # rbsc = 3 * rbsc / sum(rbsc)
+    rbsc = 10 - rbsc
     return rbsc
 
 
 if __name__ == '__main__':
-    # 持久化数据
-    # nowTime = lambda: int(round(time.time() * 1000))
-    # fp1 = open('GAv13_best_result_ga.json' + str(nowTime()), 'w')
-    # fp2 = open('GAv13_best_result_greedy.json' + str(nowTime()), 'w')
-    # fp3 = open('GAv13_best_result_greedy_down.json' + str(nowTime()), 'w')
-    # fp4 = open('GAv13_best_result_greedy_up.json' + str(nowTime()), 'w')
-    # fp5 = open('GAv13_best_result_greedy_compute.json' + str(nowTime()), 'w')
-    # fp6 = open('GAv13_best_result_greedy_resource.json' + str(nowTime()), 'w')
-    # fp7 = open('GAv13_best_result_random.json' + str(nowTime()), 'w')
     bs_num = 6
     # BSC：base station capacity
     # RBSC: residuary base station capacity
     # SR: slice request
-    max_iter = 10000  # ------------------------
+    max_iter = 10  # ------------------------
     delta = 0.000000001
     pc = 0.8
     pm = 0.01
-    req_num_eachtime = bs_num * 3
-    populationSize = min(req_num_eachtime * bs_num, 100)
+    req_num_eachtime = 1
     # 构造request_num次请求
-    request_num = 25  # --------------------------
+    request_num = 20  # --------------------------
     values = np.zeros((request_num), dtype=np.float)
     solutions = []
     sr_all = []
@@ -403,29 +383,17 @@ if __name__ == '__main__':
     cost_result = np.zeros((7, request_num, 4), dtype=np.float)
     for iter in range(request_num):
         # 随机构造每次请求的切片数
-        m = req_num_eachtime
+        m = (iter + 1) * req_num_eachtime * 10
         # 构造基站资源
-        rbsc = getRbsc(bs_num, iter)
+        rbsc = getRbsc(bs_num)
         total_rbsc = np.sum(rbsc, 0)  # 求每列之和，得到1*3向量，分别表示下行，上行，计算资源总量
         # 构造m个切片请求
         sr = np.zeros((m, 3), dtype=np.float)
         for i in range(m):
-            # s = np.random.rand(3)
             s = np.abs(np.random.normal(100, 0.5, 3)) + 1
-            # s = s / (sum(s))  # ------------------
+            s = s / (sum(s))
             sr[i] = s
         total_sr = np.sum(sr, 0)  # 求每列之和，得到1*3向量
-        # alpha = np.linspace(0.1, 1.5, request_num) #效果不错
-        print("alpha")
-        alpha = np.linspace(0.1, 0.1 * request_num, request_num)
-        print(alpha)
-        alpha = (0.1 * request_num + 0.1) - alpha
-        print(alpha)
-        alpha = 0.1 / alpha
-        print(alpha)
-        sr[:, 0] = alpha[iter] * sr[:, 0] * total_rbsc[0] / total_sr[0]
-        sr[:, 1] = alpha[iter] * sr[:, 1] * total_rbsc[1] / total_sr[1]
-        sr[:, 2] = alpha[iter] * sr[:, 2] * total_rbsc[2] / total_sr[2]
 
         rbscs.append(rbsc)
         print("rbsc:")
@@ -433,6 +401,7 @@ if __name__ == '__main__':
         print("sr:")
         print(sr)
         sr_all.append(sr)  # 记录请求，为其他算法提供相同的请求环境
+        populationSize = min(m * bs_num, 50)
         solution, value = ga(sr, rbsc, max_iter, delta, pc, pm, populationSize)
 
         # 资源紧张的时候，采用greedy算法，得到可以满足的情况
@@ -580,6 +549,7 @@ if __name__ == '__main__':
         cost_result[4][i][2] = fit[0, 2]
         cost_result[4][i][3] = fit[0, 3]
         result = {i: o}
+        # json.dump(result, fp5)
         ##############################
         # 记录失败数
         fails[4][i] = np.size(sr, 0) - np.sum(np.sum(solution, 0))
@@ -600,8 +570,6 @@ if __name__ == '__main__':
         cost_result[5][i][2] = fit[0, 2]
         cost_result[5][i][3] = fit[0, 3]
         result = {i: o}
-        # json.dump(result, fp6)
-        ##############################
         # 记录失败数
         fails[5][i] = np.size(sr, 0) - np.sum(np.sum(solution, 0), 0)
     print("greedy_min_max_cost总结果")
@@ -621,15 +589,13 @@ if __name__ == '__main__':
         cost_result[6][i][2] = fit[0, 2]
         cost_result[6][i][3] = fit[0, 3]
         result = {i: o}
-        # json.dump(result, fp7)
-        ##############################
         # 记录失败数
         fails[6][i] = np.size(sr, 0) - np.sum(np.sum(solution, 0), 0)
     print("random总结果")
     print(values)
     ##############################################################################################################
     print(fails)
-    pt.plot_fun(cost_result[:, :, 0], fails, req_num_eachtime, '切片请求数量（个）', '平均下行带宽映射代价', '下行带宽映射代价')
-    pt.plot_fun(cost_result[:, :, 1], fails, req_num_eachtime, '切片请求数量（个）', '平均上行带宽映射代价', '上行带宽映射代价')
-    pt.plot_fun(cost_result[:, :, 2], fails, req_num_eachtime, '切片请求数量（个）', '平均计算资源映射代价', '计算资源映射代价')
-    pt.plot_fun(cost_result[:, :, 3], fails, req_num_eachtime, '切片请求数量（个）', '平均总映射代价', '总映射代价')
+    pt.plot_fun(cost_result[:, :, 0], fails, req_num_eachtime, '切片请求数量（个）3', '平均下行带宽映射代价', '下行带宽映射代价')
+    pt.plot_fun(cost_result[:, :, 1], fails, req_num_eachtime, '切片请求数量（个）3', '平均上行带宽映射代价', '上行带宽映射代价')
+    pt.plot_fun(cost_result[:, :, 2], fails, req_num_eachtime, '切片请求数量（个）3', '平均计算资源映射代价', '计算资源映射代价')
+    pt.plot_fun(cost_result[:, :, 3], fails, req_num_eachtime, '切片请求数量（个）3', '平均总映射代价', '总映射代价')
