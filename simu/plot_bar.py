@@ -74,12 +74,13 @@ def plat_bar(testData, title):
     ax.yaxis.grid(True)
     ax.yaxis.grid(alpha=0.7, linestyle=':')
     ax.set_xticks(ind + width * 1)
-    ax.set_xticklabels(('algo1', 'algo2', 'algo3', 'glao4'), fontproperties=enfont)
+    ax.set_xticklabels(('GASM', 'MBCSM', 'MCCSM', 'RSM'), fontproperties=enfont)
     # ax.set_yticklabels((0, 5, 10, 15, 20, 25, 30), fontproperties=enfont)
 
     # 设置图例
     legend = ax.legend((rectsTest1, rectsTest2, rectsTest3),
-                       ('下行带宽', '上行带宽', '计算资源'), markerscale=100, loc='best', prop=zhfont)
+                       (r'$\mathit{U_{b^-}}$', r'$\mathit{U_{b^+}}$', r'$\mathit{U_p}$'), markerscale=100, loc='best',
+                       prop=zhfont)
 
     frame = legend.get_frame()
     frame.set_alpha(1)

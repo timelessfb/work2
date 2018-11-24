@@ -651,9 +651,9 @@ if __name__ == '__main__':
     sigma = 5000
     ###############
     # 遗传算法迭代次数
-    max_iter = 50
+    max_iter = 1
     # 多次取平均
-    n = 50
+    n = 1
     tz = pytz.timezone('Asia/Shanghai')  # 东八区
     print(max_iter)
     print(n)
@@ -682,14 +682,14 @@ if __name__ == '__main__':
                      str(nowtime) + '下行带宽映射代价')
     pt.plot_fun_slot(cost_result[:, :, 1], fails, req_num_eachtime, '切片请求数量（个）', '平均上行带宽映射代价',
                      str(nowtime) + '上行带宽映射代价')
-    pt.plot_fun_slot(cost_result[:, :, 2], fails, req_num_eachtime, '切片请求数量（个）', '平均计算资源映射代价',
+    pt.plot_fun_slot(cost_result[:, :, 2], fails, req_num_eachtime, '切片请求数量（个）', 1,
                      str(nowtime) + '计算资源映射代价')
     pt.plot_fun_slot((cost_result[:, :, 0] + cost_result[:, :, 1]), fails, req_num_eachtime, '切片请求数量（个）',
-                     '平均带宽资源映射代价',
+                     2,
                      str(nowtime) + '带宽资源映射代价')
-    pt.plot_fun_slot(cost_result[:, :, 3], fails, req_num_eachtime, '切片请求数量（个）', '平均总映射代价',
+    pt.plot_fun_slot(cost_result[:, :, 3], fails, req_num_eachtime, '切片请求数量（个）', 3,
                      str(nowtime) + '总映射代价' + '_' + str(max_iter) + '_' + str(n))
-    pt.plot_fun_fail_slot(fails, req_num_eachtime, '切片请求数量（个）', '失败率（%）', str(nowtime) + '失败率')
+    pt.plot_fun_fail_slot(fails, req_num_eachtime, '切片请求数量（个）', '失败率', str(nowtime) + '失败率')
     print(cost_result)
     rbsc = getRbsc(bs_num)
     r1 = rbsc[0][0]

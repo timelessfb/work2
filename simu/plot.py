@@ -118,24 +118,50 @@ enfont = fm.FontProperties(fname='C:\Windows\Fonts\\times.ttf')
 # plt.show()
 
 
-def plot_fun(cost, fails, req_num_eachtime, xlabel, ylabel, title):
+# def plot_fun(cost, fails, req_num_eachtime, xlabel, ylabel, title):
+#     fig = plt.figure()
+#     y1 = np.cumsum(cost[0, :])
+#     y2 = np.cumsum(cost[2, :])
+#     y3 = np.cumsum(cost[4, :])
+#     y4 = np.cumsum(cost[6, :])
+#     y5 = np.cumsum(cost[6, :])
+#     e1 = np.cumsum(req_num_eachtime - fails[0, :])
+#     e2 = np.cumsum(req_num_eachtime - fails[2, :])
+#     e3 = np.cumsum(req_num_eachtime - fails[3, :])
+#     e4 = np.cumsum(req_num_eachtime - fails[4, :])
+#     e5 = np.cumsum(req_num_eachtime - fails[6, :])
+#
+#     y1 = y1 / e1
+#     y2 = y2 / e2
+#     y3 = y3 / e3
+#     y4 = y4 / e4
+#     y5 = y5 / e5
+#
+#     n = len(y1)
+#     x = np.linspace(0, n - 1, n)
+#     x = [req_num_eachtime * (i + 1) for i in x]
+#     left, bottom, width, height = 0.1, 0.1, 0.8, 0.8
+#     ax1 = fig.add_axes([left, bottom, width, height])
+#
+#     l1, = ax1.plot(x, y1, 'rx-')
+#     l2, = ax1.plot(x, y2, 'go-')
+#     l3, = ax1.plot(x, y3, 'b+-')
+#     l4, = ax1.plot(x, y4, 'y^-')
+#     l5, = ax1.plot(x, y5, 'm+-.')
+#     ax1.set_xlabel(xlabel, fontproperties=zhfont)
+#     ax1.set_ylabel(ylabel, fontproperties=zhfont)
+#     ax1.set_title(title, fontproperties=zhfont)
+#     plt.legend(handles=[l1, l2, l3, l4, l5], labels=['gabm', 'greedy_down', 'greedy_up', 'greedy_compute', 'random'],
+#                loc='best', prop=enfont)
+#     plt.savefig(title)
+
+
+def plot_fun(cost, req_num_eachtime, xlabel, ylabel, title):
     fig = plt.figure()
     y1 = np.cumsum(cost[0, :])
     y2 = np.cumsum(cost[2, :])
-    y3 = np.cumsum(cost[3, :])
-    y4 = np.cumsum(cost[4, :])
-    y5 = np.cumsum(cost[6, :])
-    e1 = np.cumsum(req_num_eachtime - fails[0, :])
-    e2 = np.cumsum(req_num_eachtime - fails[2, :])
-    e3 = np.cumsum(req_num_eachtime - fails[3, :])
-    e4 = np.cumsum(req_num_eachtime - fails[4, :])
-    e5 = np.cumsum(req_num_eachtime - fails[6, :])
-
-    y1 = y1 / e1
-    y2 = y2 / e2
-    y3 = y3 / e3
-    y4 = y4 / e4
-    y5 = y5 / e5
+    y3 = np.cumsum(cost[4, :])
+    y4 = np.cumsum(cost[6, :])
 
     n = len(y1)
     x = np.linspace(0, n - 1, n)
@@ -143,16 +169,21 @@ def plot_fun(cost, fails, req_num_eachtime, xlabel, ylabel, title):
     left, bottom, width, height = 0.1, 0.1, 0.8, 0.8
     ax1 = fig.add_axes([left, bottom, width, height])
 
-    l1, = ax1.plot(x, y1, 'rx-')
-    l2, = ax1.plot(x, y2, 'go-')
-    l3, = ax1.plot(x, y3, 'b+-')
-    l4, = ax1.plot(x, y4, 'y^-')
-    l5, = ax1.plot(x, y5, 'm+-.')
+    x = np.r_[0, x]
+    y1 = np.r_[0, y1]
+    y2 = np.r_[0, y2]
+    y3 = np.r_[0, y3]
+    y4 = np.r_[0, y4]
+
+    l1, = ax1.plot(x, y1, color='y', marker='d', markerfacecolor='w', linestyle=':')
+    l2, = ax1.plot(x, y2, color='g', marker='x', markerfacecolor='w', linestyle='-.')
+    l3, = ax1.plot(x, y3, color='b', marker='^', markerfacecolor='w', linestyle='-.')
+    l4, = ax1.plot(x, y4, color='c', marker='+', markerfacecolor='w', linestyle='-.')
+
     ax1.set_xlabel(xlabel, fontproperties=zhfont)
     ax1.set_ylabel(ylabel, fontproperties=zhfont)
-    ax1.set_title(title, fontproperties=zhfont)
-    plt.legend(handles=[l1, l2, l3, l4, l5], labels=['gabm', 'greedy_down', 'greedy_up', 'greedy_compute', 'random'],
-               loc='best', prop=enfont)
+    # ax1.set_title(title, fontproperties=zhfont)
+    plt.legend(handles=[l1, l2, l3, l4], labels=['GASM', 'MBCSM', 'MCCSM', 'RSM'], loc='best', prop=enfont)
     plt.savefig(title)
 
 
@@ -197,12 +228,20 @@ def plot_fun_slot(cost, fails, req_num_deta_eachtime, xlabel, ylabel, title):
     l4, = ax1.plot(x, y4, color='c', marker='+', markerfacecolor='w', linestyle='-.')
     # l5, = ax1.plot(x, y5, color='y', marker='o', markerfacecolor='w', linestyle='--')
     ax1.set_xlabel(xlabel, fontproperties=zhfont)
+    if ylabel == 1:
+        ylabel = r'$\mathit{\overline{\phi}_p}$'
+
+    if ylabel == 2:
+        ylabel = r'$\mathit{\overline{\phi}_b}$'
+
+    if ylabel == 3:
+        ylabel = r'$\mathit{\overline{\phi}_{total}}$'
+
     ax1.set_ylabel(ylabel, fontproperties=zhfont)
     # ax1.set_xticks(x)
     title += 'slot'
-    ax1.set_title(title, fontproperties=zhfont)
-    plt.legend(handles=[l1, l2, l3, l4], labels=['gabm', 'greedy_bandwidth', 'greedy_compute', 'random'],
-               loc='best', prop=enfont)
+    # ax1.set_title(title, fontproperties=zhfont)
+    plt.legend(handles=[l1, l2, l3, l4], labels=['GASM', 'MBCSM', 'MCCSM', 'RSM'], loc='best', prop=enfont)
     plt.savefig(title)
 
 
@@ -244,9 +283,10 @@ def plot_fun_fail_slot(fails, req_num_deta_eachtime, xlabel, ylabel, title):
     # l5, = ax1.plot(x, y5, color='y', marker='o', markerfacecolor='w', linestyle='--')
 
     ax1.set_xlabel(xlabel, fontproperties=zhfont)
+    ylabel = r'$\mathit{{\Psi}(\%)}$'
+
     ax1.set_ylabel(ylabel, fontproperties=zhfont)
     title += 'slot'
-    ax1.set_title(title, fontproperties=zhfont)
-    plt.legend(handles=[l1, l2, l3, l4], labels=['gabm', 'greedy_bandwidth', 'greedy_compute', 'random'],
-               loc='best', prop=enfont)
+    # ax1.set_title(title, fontproperties=zhfont)
+    plt.legend(handles=[l1, l2, l3, l4], labels=['GASM', 'MBCSM', 'MCCSM', 'RSM'], loc='best', prop=enfont)
     plt.savefig(title)

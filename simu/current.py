@@ -348,7 +348,7 @@ def ga(SR, RBSC, max_iter=500, delta=0.0001, pc=0.8, pm=0.01, populationSize=10)
     return optimalSolution, optimalValue
 
 
-def getRbsc(bs_num, iter):
+def getRbsc(bs_num):
     rbsc = np.zeros((bs_num, 3), dtype=np.float)
     # alpha = 3 - math.log(iter + 1, 6)  # -------------------------
     alpha = 3  # -------------------------
@@ -388,9 +388,9 @@ def simu(request_num=15, req_num_eachtime=4, sigma=50000, max_iter=1, bs_num=6):
     #     sr_total[i] = s
     for iter in range(request_num):
         # 构造m个切片请求
-        m = req_num_eachtime
+        m = req_num_eachtime  # 此处需要改
         # 构造基站资源
-        rbsc = getRbsc(bs_num, iter)
+        rbsc = getRbsc(bs_num)
         total_rbsc = np.sum(rbsc, 0)  # 求每列之和，得到1*3向量，分别表示下行，上行，计算资源总量
         # 构造m个切片请求
         sr = np.zeros((m, 3), dtype=np.float)
@@ -626,21 +626,6 @@ def simu(request_num=15, req_num_eachtime=4, sigma=50000, max_iter=1, bs_num=6):
     print(values)
     ##############################################################################################################
     print(fails)
-    # nowtime = (lambda: int(round(time.time() * 1000)))
-    # nowtime = nowtime()
-    # print(cost_result[:, :, 0])
-    # print(cost_result[:, :, 1])
-    # print(cost_result[:, :, 2])
-    # print(cost_result[:, :, 3])
-    # pt.plot_fun_slot(cost_result[:, :, 0], fails, req_num_eachtime, '切片请求数量（个）', '平均下行带宽映射代价',
-    #                  str(nowtime) + '下行带宽映射代价' + '_' + str(sigma))
-    # pt.plot_fun_slot(cost_result[:, :, 1], fails, req_num_eachtime, '切片请求数量（个）', '平均上行带宽映射代价',
-    #                  str(nowtime) + '上行带宽映射代价' + '_' + str(sigma))
-    # pt.plot_fun_slot(cost_result[:, :, 2], fails, req_num_eachtime, '切片请求数量（个）', '平均计算资源映射代价',
-    #                  str(nowtime) + '计算资源映射代价' + '_' + str(sigma))
-    # pt.plot_fun_slot(cost_result[:, :, 3], fails, req_num_eachtime, '切片请求数量（个）', '平均总映射代价',
-    #                  str(nowtime) + '总映射代价' + '_' + str(sigma))
-    # pt.plot_fun_fail_slot(fails, req_num_eachtime, '切片请求数量（个）', '失败率（%）', str(nowtime) + '失败率' + '_' + str(sigma))
     return cost_result, fails, resource_used_radio
 
 
@@ -651,9 +636,9 @@ if __name__ == '__main__':
     sigma = 5000
     ###############
     # 遗传算法迭代次数
-    max_iter = 50
+    max_iter = 1
     # 多次取平均
-    n = 50
+    n = 1
     tz = pytz.timezone('Asia/Shanghai')  # 东八区
     print(max_iter)
     print(n)
@@ -678,41 +663,32 @@ if __name__ == '__main__':
     resource_used_radio /= n
     nowtime = (lambda: int(round(time.time() * 1000)))
     nowtime = nowtime()
-    pt.plot_fun_slot(cost_result[:, :, 0], fails, req_num_eachtime, '切片请求数量（个）', '平均下行带宽映射代价',
-                     str(nowtime) + '下行带宽映射代价')
-    pt.plot_fun_slot(cost_result[:, :, 1], fails, req_num_eachtime, '切片请求数量（个）', '平均上行带宽映射代价',
-                     str(nowtime) + '上行带宽映射代价')
-    pt.plot_fun_slot(cost_result[:, :, 2], fails, req_num_eachtime, '切片请求数量（个）', '平均计算资源映射代价',
-                     str(nowtime) + '计算资源映射代价')
-    pt.plot_fun_slot((cost_result[:, :, 0] + cost_result[:, :, 1]), fails, req_num_eachtime, '切片请求数量（个）',
-                     '平均带宽资源映射代价',
-                     str(nowtime) + '带宽资源映射代价')
-    pt.plot_fun_slot(cost_result[:, :, 3], fails, req_num_eachtime, '切片请求数量（个）', '平均总映射代价',
-                     str(nowtime) + '总映射代价' + '_' + str(max_iter) + '_' + str(n))
-    pt.plot_fun_fail_slot(fails, req_num_eachtime, '切片请求数量（个）', '失败率（%）', str(nowtime) + '失败率')
-    print(cost_result)
+    pt.plot_fun(cost_result[:, :, 0], req_num_eachtime, '时间（小时）', '累积下行带宽映射代价',
+                str(nowtime) + '累积下行带宽映射代价')
+    pt.plot_fun(cost_result[:, :, 1], req_num_eachtime, '时间（小时）', '累积上行带宽映射代价',
+                str(nowtime) + '累积上行带宽映射代价')
+    pt.plot_fun(cost_result[:, :, 2], req_num_eachtime, '时间（小时）', '累积计算资源映射代价',
+                str(nowtime) + '累积计算资源映射代价')
+    pt.plot_fun((cost_result[:, :, 0] + cost_result[:, :, 1]), req_num_eachtime, '时间（小时）',
+                '累积带宽资源映射代价',
+                str(nowtime) + '累积带宽资源映射代价')
+    pt.plot_fun(cost_result[:, :, 3], req_num_eachtime, '时间（小时）', '累积映射代价',
+                str(nowtime) + '总映射代价' + '_' + str(max_iter) + '_' + str(n))
+    # pt.plot_fun_fail_slot(fails, req_num_eachtime, '切片请求数量（个）', '失败率（%）', str(nowtime) + '失败率')
     rbsc = getRbsc(bs_num)
     r1 = rbsc[0][0]
     r2 = rbsc[0][1]
     r3 = rbsc[0][2]
     for algorithm in range(7):
         resource_radio[algorithm, :] = 1 - (np.sum(resource_used_radio[algorithm, :, :], 0) / ((r1 + r2 + r3) * 6))
-    plot_bar.plat_bar(resource_radio, str(nowtime) + '资源使用率')
+    plot_bar.plat_bar(resource_radio, str(nowtime) + '累积资源使用率')
 
-    # for algorithm in range(7):
-    #     for bs in range(bs_num):
-    #         for resource_type in range(3):
-    #             resource_used_radio[algorithm][bs][resource_type] = resource_used_radio[algorithm][bs][resource_type] / \
-    #                                                                 rbsc[bs][resource_type]
-    # for algorithm in range(7):
-    #     resource_radio[algorithm, :] = 1 - resource_used_radio[algorithm, bs_num - 1, :]
-    # print(resource_radio)
-    # plot_bar.plat_bar(resource_used_radio[:,0,:], str(nowtime) + '资源使用率1')
-    # plot_bar.plat_bar(resource_used_radio[:,1,:], str(nowtime) + '资源使用率2')
-    # plot_bar.plat_bar(resource_used_radio[:,2,:], str(nowtime) + '资源使用率3')
-    # plot_bar.plat_bar(resource_used_radio[:,3,:], str(nowtime) + '资源使用率4')
-    # plot_bar.plat_bar(resource_used_radio[:,4,:], str(nowtime) + '资源使用率5')
-    # plot_bar.plat_bar(resource_used_radio[:,5,:], str(nowtime) + '资源使用率6')
-
-    print('wwwww')
+    print("结果")
+    print("cost_result")
+    print(cost_result)
+    print("fails")
     print(fails)
+    print("req_num_eachtime")
+    print(req_num_eachtime)
+    print("resource_radio")
+    print(resource_radio)
