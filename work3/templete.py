@@ -1,14 +1,12 @@
 #!usr/bin/env python
 # -*- coding:utf-8 -*-
 # 稳定版，添加中间数据的持久化，网络高负载情况，增加记录拒绝服务的请求数
-import datetime
+import math
 import sys
 import time
+
 import numpy as np
 import random
-
-import pytz
-
 import simu.greedy as greedy
 import simu.greedy_computing as greedy_computing
 import simu.greedy_down_bandwidth as greedy_down_bandwidth
@@ -16,11 +14,9 @@ import simu.greedy_up_bandwidth as greedy_up_bandwidth
 import simu.greedy_resource as greedy_resource
 import simu.RandomSelect as random_select
 import simu.greedy_bandwidth as greedy_bandwidth
-import simu.plot_bar as plot_bar
 import json
 
 import simu.plot as pt
-from simu import plot_convergence
 
 
 def check(sr, rbsc, chromosome):
@@ -43,10 +39,37 @@ def check(sr, rbsc, chromosome):
     return True
 
 
+# 那么一个个体应该用M * N的数组表示(要求：每一行只有一个1，每一列请求的资源不能超过基站剩余资源)，所有数组应该有L*M*N大小的矩阵表示
 def getInitialPopulation(sr, rbsc, populationSize, delta=0.000000001):
     m = np.size(sr, 0)
     n = np.size(rbsc, 0)
     chromosomes_list = []
+    ####################################################################################
+    cost, rbsc_realtime, solution = greedy_resource.greedy_min_cost(sr, rbsc, delta)
+    if check(sr, rbsc, solution):
+        chromosomes_list.append(solution)
+        populationSize -= 1
+
+    cost, rbsc_realtime, solution = greedy.greedy_min_cost(sr, rbsc, delta)
+    if check(sr, rbsc, solution):
+        chromosomes_list.append(solution)
+        populationSize -= 1
+
+    cost, rbsc_realtime, solution = greedy_down_bandwidth.greedy_min_down_bandwidth_cost(sr, rbsc, delta)
+    if check(sr, rbsc, solution):
+        chromosomes_list.append(solution)
+        populationSize -= 1
+
+    cost, rbsc_realtime, solution = greedy_up_bandwidth.greedy_min_up_bandwidth_cost(sr, rbsc, delta)
+    if check(sr, rbsc, solution):
+        chromosomes_list.append(solution)
+        populationSize -= 1
+    cost, rbsc_realtime, solution = greedy_computing.greedy_min_compute_cost(sr, rbsc, delta)
+    if check(sr, rbsc, solution):
+        chromosomes_list.append(solution)
+        populationSize -= 1
+
+    ####################################################################################
     for i in range(populationSize):
         # 随机产生一个染色体
         chromosome = np.zeros((m, n), dtype=int)
@@ -54,10 +77,7 @@ def getInitialPopulation(sr, rbsc, populationSize, delta=0.000000001):
         # flag_of_matrix = 1
         # 产生一个染色体矩阵中的其中一行
         l = np.arange(m)
-        if i == 0:
-            l = l[::-1]
-        elif i > 1:
-            np.random.shuffle(l)
+        np.random.shuffle(l)
         for j in l:
             min_cost_j = sys.maxsize
             min_bs_j = -1
@@ -66,15 +86,16 @@ def getInitialPopulation(sr, rbsc, populationSize, delta=0.000000001):
                     2] < rbsc_realtime[bs_of_select][2]:
                     if (sr[j][0] / rbsc_realtime[bs_of_select][0] + sr[j][1] < rbsc_realtime[bs_of_select][1] + sr[j][
                         2] / rbsc_realtime[bs_of_select][2]) < min_cost_j:
+                        min_cost_j = sr[j][0] / rbsc_realtime[bs_of_select][0] + sr[j][1] < rbsc_realtime[bs_of_select][
+                            1] + sr[j][2] / rbsc_realtime[bs_of_select][2]
                         min_bs_j = bs_of_select
-                        break
-            if min_bs_j != -1:
-                chromosome[j][min_bs_j] = 1
-                rbsc_realtime[min_bs_j][0] -= sr[j][0]
-                rbsc_realtime[min_bs_j][1] -= sr[j][1]
-                rbsc_realtime[min_bs_j][2] -= sr[j][2]
-        # 将产生的染色体加入到chromosomes_list中
-        chromosomes_list.append(chromosome)
+        if min_bs_j != -1:
+            chromosome[j][min_bs_j] = 1
+            rbsc_realtime[min_bs_j][0] -= sr[j][0]
+            rbsc_realtime[min_bs_j][1] -= sr[j][1]
+            rbsc_realtime[min_bs_j][2] -= sr[j][2]
+    # 将产生的染色体加入到chromosomes_list中
+    chromosomes_list.append(chromosome)
     chromosomes = np.array(chromosomes_list)
     return chromosomes
 
@@ -97,7 +118,7 @@ def getFitnessValue(sr, rbsc, chromosomes, delta):
                 # cost_of_down_bandwidth += penalty
                 # cost_of_up_bandwidth += penalty
                 # cost_of_computing += penalty
-                fitness[i][3] += 3 * penalty
+                fitness[i][3] += 30
                 continue
             for k in range(n):
                 if chromosome[j][k] == 1:
@@ -310,7 +331,7 @@ def ga(SR, RBSC, max_iter=500, delta=0.0001, pc=0.8, pm=0.01, populationSize=10)
         mutationpopulation = mutation(SR, RBSC, crossoverpopulation, pm)
         # 适应度评价
         fitness = getFitnessValue(SR, RBSC, mutationpopulation, delta)
-        # 搜索每次迭代的最优解，以及最优解对应的目标函数的取值，代价非适应度
+        # 搜索每次迭代的最优解，以及最优解对应的目标函数的取值
         optimalValues.append(np.min(list(fitness[:, 3])))
         index = np.where(fitness[:, 3] == min(list(fitness[:, 3])))
         optimalSolutions.append(mutationpopulation[index[0][0], :, :])
@@ -319,7 +340,7 @@ def ga(SR, RBSC, max_iter=500, delta=0.0001, pc=0.8, pm=0.01, populationSize=10)
     optimalValue = np.min(optimalValues)
     optimalIndex = np.where(optimalValues == optimalValue)
     optimalSolution = optimalSolutions[optimalIndex[0][0]]
-    return optimalValues
+    return optimalSolution, optimalValue
 
 
 def getRbsc(bs_num):
@@ -329,8 +350,8 @@ def getRbsc(bs_num):
     # r2 = 3
     # r3 = 1
     r1 = 5
-    r2 = 3
-    r3 = 1
+    r2 = 2.5
+    r3 = 1.25
     rbsc[0][0] = r1
     rbsc[0][1] = r2
     rbsc[0][2] = r3
@@ -349,18 +370,15 @@ def getRbsc(bs_num):
     rbsc[5][0] = r3
     rbsc[5][1] = r2
     rbsc[5][2] = r1
-    # rbsc[6][0] = r2
-    # rbsc[6][1] = r2
-    # rbsc[6][2] = r2
     return rbsc
 
 
-def simu(request_num=15, req_num_eachtime=4, sigma=50000, max_iter=1, bs_num=6):
-    # bs_num = 6
+def simu(request_num=15, req_num_eachtime=4, sigma=50000, max_iter=1):
+    bs_num = 6
     # BSC：base station capacity
     # RBSC: residuary base station capacity
     # SR: slice request
-    # max_iter = 1  # ------------------------
+    max_iter = 1  # ------------------------
     delta = 0.000000001
     pc = 0.8
     pm = 0.01
@@ -375,8 +393,6 @@ def simu(request_num=15, req_num_eachtime=4, sigma=50000, max_iter=1, bs_num=6):
     fails = np.zeros((7, request_num))
     # 记录7中算法每次迭代得到下行，上行，计算，总代价
     cost_result = np.zeros((7, request_num, 4), dtype=np.float)
-    resource_used_radio = np.zeros((7, bs_num, 3), dtype=np.float)
-    time_resouce_used = request_num - 1
     # sigma = 50000
     # 构造m个切片请求
     m = req_num_eachtime * request_num
@@ -386,6 +402,8 @@ def simu(request_num=15, req_num_eachtime=4, sigma=50000, max_iter=1, bs_num=6):
         s = s / (sum(s))
         sr_total[i] = s
     for iter in range(request_num):
+        print('iter')
+        print(iter)
         # 随机构造每次请求的切片数
         m = (iter + 1) * req_num_eachtime
         # 构造基站资源
@@ -403,7 +421,7 @@ def simu(request_num=15, req_num_eachtime=4, sigma=50000, max_iter=1, bs_num=6):
         print("sr:")
         print(sr)
         sr_all.append(sr)  # 记录请求，为其他算法提供相同的请求环境
-        populationSize = min(50, m * bs_num)
+        populationSize = min(m * bs_num, 50)
         solution, value = ga(sr, rbsc, max_iter, delta, pc, pm, populationSize)
 
         # 资源紧张的时候，采用greedy算法，得到可以满足的情况
@@ -452,14 +470,11 @@ def simu(request_num=15, req_num_eachtime=4, sigma=50000, max_iter=1, bs_num=6):
         cost_result[0][iter][1] = fit[0, 1]
         cost_result[0][iter][2] = fit[0, 2]
         cost_result[0][iter][3] = fit[0, 0] + fit[0, 1] + fit[0, 2]
+        result = {iter: o}
+        # json.dump(result, fp1)
         ##############################
         solutions.append(np.copy(solution))
-        if iter == time_resouce_used:
-            rbsc_init = getRbsc(bs_num)
-            rbsc = update_rbsc(sr, rbsc_init, solution)
-            for bs in range(bs_num):
-                for resource_type in range(3):
-                    resource_used_radio[0][bs][resource_type] = rbsc[bs][resource_type] / rbsc_init[bs][resource_type]
+        # rbsc = update_rbsc(sr, rbsc, solution)
     print("ga总结果")
     print(values)
     # print(rbsc)
@@ -477,15 +492,10 @@ def simu(request_num=15, req_num_eachtime=4, sigma=50000, max_iter=1, bs_num=6):
         cost_result[1][i][1] = fit[0, 1]
         cost_result[1][i][2] = fit[0, 2]
         cost_result[1][i][3] = fit[0, 0] + fit[0, 1] + fit[0, 2]
+        result = {i: o}
         ##############################
         # 记录失败数
         fails[1][i] = np.size(sr, 0) - np.sum(np.sum(solution, 0), 0)
-        if i == time_resouce_used:
-            rbsc_init = getRbsc(bs_num)
-            rbsc = update_rbsc(sr, rbsc_init, solution)
-            for bs in range(bs_num):
-                for resource_type in range(3):
-                    resource_used_radio[1][bs][resource_type] = rbsc[bs][resource_type] / rbsc_init[bs][resource_type]
     print("greedy_min_cost总结果")
     print(values)
     ##############################################################################################################
@@ -503,15 +513,10 @@ def simu(request_num=15, req_num_eachtime=4, sigma=50000, max_iter=1, bs_num=6):
         cost_result[2][i][1] = fit[0, 1]
         cost_result[2][i][2] = fit[0, 2]
         cost_result[2][i][3] = fit[0, 0] + fit[0, 1] + fit[0, 2]
+        result = {i: o}
         ##############################
         # 记录失败数
         fails[2][i] = np.size(sr, 0) - np.sum(np.sum(solution, 0), 0)
-        if i == time_resouce_used:
-            rbsc_init = getRbsc(bs_num)
-            rbsc = update_rbsc(sr, rbsc_init, solution)
-            for bs in range(bs_num):
-                for resource_type in range(3):
-                    resource_used_radio[2][bs][resource_type] = rbsc[bs][resource_type] / rbsc_init[bs][resource_type]
     print("greedy_min_bandwidth_cost总结果")
     print(values)
     ##############################################################################################################
@@ -528,15 +533,10 @@ def simu(request_num=15, req_num_eachtime=4, sigma=50000, max_iter=1, bs_num=6):
         cost_result[3][i][1] = fit[0, 1]
         cost_result[3][i][2] = fit[0, 2]
         cost_result[3][i][3] = fit[0, 0] + fit[0, 1] + fit[0, 2]
+        result = {i: o}
         ##############################
         # 记录失败数
         fails[3][i] = np.size(sr, 0) - np.sum(np.sum(solution, 0), 0)
-        if i == time_resouce_used:
-            rbsc_init = getRbsc(bs_num)
-            rbsc = update_rbsc(sr, rbsc_init, solution)
-            for bs in range(bs_num):
-                for resource_type in range(3):
-                    resource_used_radio[3][bs][resource_type] = rbsc[bs][resource_type] / rbsc_init[bs][resource_type]
     print("greedy_min_up_bandwidth_cost总结果")
     print(values)
     ##############################################################################################################
@@ -553,15 +553,10 @@ def simu(request_num=15, req_num_eachtime=4, sigma=50000, max_iter=1, bs_num=6):
         cost_result[4][i][1] = fit[0, 1]
         cost_result[4][i][2] = fit[0, 2]
         cost_result[4][i][3] = fit[0, 0] + fit[0, 1] + fit[0, 2]
+        result = {i: o}
         ##############################
         # 记录失败数
         fails[4][i] = np.size(sr, 0) - np.sum(np.sum(solution, 0))
-        if i == time_resouce_used:
-            rbsc_init = getRbsc(bs_num)
-            rbsc = update_rbsc(sr, rbsc_init, solution)
-            for bs in range(bs_num):
-                for resource_type in range(3):
-                    resource_used_radio[4][bs][resource_type] = rbsc[bs][resource_type] / rbsc_init[bs][resource_type]
     print("greedy_min_compute_cost总结果")
     print(values)
     ##############################################################################################################
@@ -578,14 +573,9 @@ def simu(request_num=15, req_num_eachtime=4, sigma=50000, max_iter=1, bs_num=6):
         cost_result[5][i][1] = fit[0, 1]
         cost_result[5][i][2] = fit[0, 2]
         cost_result[5][i][3] = fit[0, 0] + fit[0, 1] + fit[0, 2]
+        result = {i: o}
         # 记录失败数
         fails[5][i] = np.size(sr, 0) - np.sum(np.sum(solution, 0), 0)
-        if i == time_resouce_used:
-            rbsc_init = getRbsc(bs_num)
-            rbsc = update_rbsc(sr, rbsc_init, solution)
-            for bs in range(bs_num):
-                for resource_type in range(3):
-                    resource_used_radio[5][bs][resource_type] = rbsc[bs][resource_type] / rbsc_init[bs][resource_type]
     print("greedy_min_max_cost总结果")
     print(values)
     ##############################################################################################################
@@ -602,60 +592,62 @@ def simu(request_num=15, req_num_eachtime=4, sigma=50000, max_iter=1, bs_num=6):
         cost_result[6][i][1] = fit[0, 1]
         cost_result[6][i][2] = fit[0, 2]
         cost_result[6][i][3] = fit[0, 0] + fit[0, 1] + fit[0, 2]
+        result = {i: o}
         # 记录失败数
         fails[6][i] = np.size(sr, 0) - np.sum(np.sum(solution, 0), 0)
-        if i == time_resouce_used:
-            rbsc_init = getRbsc(bs_num)
-            rbsc = update_rbsc(sr, rbsc_init, solution)
-            for bs in range(bs_num):
-                for resource_type in range(3):
-                    resource_used_radio[6][bs][resource_type] = rbsc[bs][resource_type] / rbsc_init[bs][resource_type]
     print("random总结果")
     print(values)
     ##############################################################################################################
     print(fails)
-    return cost_result, fails, resource_used_radio
+    # nowtime = (lambda: int(round(time.time() * 1000)))
+    # nowtime = nowtime()
+    # print(cost_result[:, :, 0])
+    # print(cost_result[:, :, 1])
+    # print(cost_result[:, :, 2])
+    # print(cost_result[:, :, 3])
+    # pt.plot_fun_slot(cost_result[:, :, 0], fails, req_num_eachtime, '切片请求数量（个）', '平均下行带宽映射代价',
+    #                  str(nowtime) + '下行带宽映射代价' + '_' + str(sigma))
+    # pt.plot_fun_slot(cost_result[:, :, 1], fails, req_num_eachtime, '切片请求数量（个）', '平均上行带宽映射代价',
+    #                  str(nowtime) + '上行带宽映射代价' + '_' + str(sigma))
+    # pt.plot_fun_slot(cost_result[:, :, 2], fails, req_num_eachtime, '切片请求数量（个）', '平均计算资源映射代价',
+    #                  str(nowtime) + '计算资源映射代价' + '_' + str(sigma))
+    # pt.plot_fun_slot(cost_result[:, :, 3], fails, req_num_eachtime, '切片请求数量（个）', '平均总映射代价',
+    #                  str(nowtime) + '总映射代价' + '_' + str(sigma))
+    # pt.plot_fun_fail_slot(fails, req_num_eachtime, '切片请求数量（个）', '失败率（%）', str(nowtime) + '失败率' + '_' + str(sigma))
+    return cost_result, fails
 
 
-# 时间估算：1小时只能跑1200
 if __name__ == '__main__':
-    request_num = 12
+    request_num = 15
     req_num_eachtime = 6
     sigma = 5000
-    delta = 0.000000001
-    pc = 0.8
-    pm = 0.01
-    populationSize = 50
-    ###############
-    # 遗传算法迭代次数
-    max_iter = 500
+    max_iter = 1
+    cost_result = np.zeros((7, request_num, 4), dtype=np.float)
+    fails = np.zeros((7, request_num))
     # 多次取平均
-    n = 100
-    tz = pytz.timezone('Asia/Shanghai')  # 东八区
-    print(max_iter)
-    print(n)
-    ###############
-    bs_num = 6
-
-    optimalValues = np.zeros((4, max_iter + 1))
-    sr_num = [12, 14, 16, 18]
+    n = 1000
     for i in range(n):
-        for j in range(len(sr_num)):
-            m = sr_num[j]
-            sr = np.zeros((m, 3), dtype=np.float)
-            for k in range(m):
-                s = np.abs(np.random.normal(100, sigma, 3)) + 1
-                s = s / (sum(s))
-                sr[k] = s
-            rbsc = getRbsc(bs_num)
-            o = ga(sr, rbsc, max_iter, delta, pc, pm, populationSize)
-            optimalValues[j] += np.array(o)
-    optimalValues /= n
-
-    # 打印
+        cost_result_, fails_ = simu(request_num, req_num_eachtime, sigma, max_iter)
+        cost_result += cost_result_
+        fails += fails_
+    cost_result /= n
+    fails /= n
     nowtime = (lambda: int(round(time.time() * 1000)))
     nowtime = nowtime()
-    plot_convergence.plot(optimalValues, sr_num, '迭代次数（次）', '总映射代价',
-                          str(nowtime) + '收敛性' + '_' + str(max_iter) + '_' + str(n) + '_' + str(populationSize))
-    print("结束")
-    print(optimalValues)
+    pt.plot_fun_slot(cost_result[:, :, 0], fails, req_num_eachtime, '切片请求数量（个）', '平均下行带宽映射代价',
+                     str(nowtime) + '下行带宽映射代价' + '_' + str(max_iter) + '_' + str(n))
+    pt.plot_fun_slot(cost_result[:, :, 1], fails, req_num_eachtime, '切片请求数量（个）', '平均上行带宽映射代价',
+                     str(nowtime) + '上行带宽映射代价' + '_' + str(max_iter))
+    pt.plot_fun_slot(cost_result[:, :, 2], fails, req_num_eachtime, '切片请求数量（个）', '平均计算资源映射代价',
+                     str(nowtime) + '计算资源映射代价' + '_' + str(max_iter))
+    pt.plot_fun_slot((cost_result[:, :, 0] + cost_result[:, :, 1]), fails, req_num_eachtime, '切片请求数量（个）',
+                     '平均带宽资源映射代价',
+                     str(nowtime) + '带宽资源映射代价' + '_' + str(max_iter))
+    pt.plot_fun_slot(cost_result[:, :, 3], fails, req_num_eachtime, '切片请求数量（个）', '平均总映射代价',
+                     str(nowtime) + '总映射代价' + '_' + str(sigma))
+    pt.plot_fun_fail_slot(fails, req_num_eachtime, '切片请求数量（个）', '失败率（%）', str(nowtime) + '失败率' + '_' + str(max_iter))
+    print(cost_result[:, :, 0])
+    print(cost_result[:, :, 1])
+    print(cost_result[:, :, 2])
+    print(cost_result[:, :, 3])
+    print(fails)

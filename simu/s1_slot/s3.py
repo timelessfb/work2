@@ -411,7 +411,7 @@ def simu(request_num=15, req_num_eachtime=4, sigma=50000, max_iter=1, bs_num=6):
     for i in range(m):
         s = np.abs(np.random.normal(100, sigma, 3)) + 1
         s = s / (sum(s))
-        sr_total[i] = s
+        sr_total[i] = s # 切片请求中的三种资源均匀分布在0-1之间，且三种资源之和为1
     for iter in range(request_num):
         # 随机构造每次请求的切片数
         m = (iter + 1) * req_num_eachtime
