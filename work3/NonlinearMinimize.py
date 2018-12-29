@@ -66,21 +66,40 @@ def XtoZ(l_x, l_y, X_map, S, J_num):
     return t
 
 
-def constraint(resorce_type, z,j, X_map, I, ROH, S, J_num, load):
+def ResourceConstraint(resorce_type, z, j, X_map, I, ROH, S, J_num, load):
     x_indexs = []
     y_indexs = []
+    s_in_j = []
     for s in range(S):
         if X_map[s][j] == 0:
             x_indexs.append(XtoZ(s, j, X_map, S, J_num))
             y_indexs.append(XtoZ(s, J_num, X_map, S, J_num))
+            s_in_j.append(s)
     if resorce_type == 'down':
-        for i in
+        o = load[j][0]
+        for i in range(len(x_indexs)):
+            o -= z[x_indexs[i]] * z[y_indexs[i]] * ROH[s][0]
+            return o
+    if resorce_type == 'up':
+        o = load[j][1]
+        for i in range(len(x_indexs)):
+            o -= z[x_indexs[i]] * z[y_indexs[i]] * ROH[s][1]
+        return o
+
+    if resorce_type == 'compute':
+        o = load[j][2]
+        for i in range(len(x_indexs)):
+            o -= z[x_indexs[i]] * z[y_indexs[i]] * ROH[s][2]
+        return o
 
 
 def foo(X_map, I, ROH, S, J_num, load):
     cons = []
     for j in range(J_num):
-        cons.append({'type': 'ineq', 'fun': lambda z: constraint('down', z,j, X_map, I, ROH, S, J_num, load)})
+        cons.append({'type': 'ineq', 'fun': lambda z: ResourceConstraint('down', z, j, X_map, I, ROH, S, J_num, load)})
+        cons.append({'type': 'ineq', 'fun': lambda z: ResourceConstraint('up', z, j, X_map, I, ROH, S, J_num, load)})
+        cons.append(
+            {'type': 'ineq', 'fun': lambda z: ResourceConstraint('compute', z, j, X_map, I, ROH, S, J_num, load)})
 
 
 if __name__ == '__main__':
