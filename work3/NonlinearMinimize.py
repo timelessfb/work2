@@ -66,9 +66,21 @@ def XtoZ(l_x, l_y, X_map, S, J_num):
     return t
 
 
-def foo(X_map, I, ROH, S, J_num, load):
-    while True:
+def constraint(resorce_type, z,j, X_map, I, ROH, S, J_num, load):
+    x_indexs = []
+    y_indexs = []
+    for s in range(S):
+        if X_map[s][j] == 0:
+            x_indexs.append(XtoZ(s, j, X_map, S, J_num))
+            y_indexs.append(XtoZ(s, J_num, X_map, S, J_num))
+    if resorce_type == 'down':
+        for i in
 
+
+def foo(X_map, I, ROH, S, J_num, load):
+    cons = []
+    for j in range(J_num):
+        cons.append({'type': 'ineq', 'fun': lambda z: constraint('down', z,j, X_map, I, ROH, S, J_num, load)})
 
 
 if __name__ == '__main__':
@@ -84,6 +96,9 @@ if __name__ == '__main__':
     X_map = np.random.binomial(1, 0.5, [S, J_num])
     X_map -= 1
     X_map = np.c_[X_map, np.zeros(S)]
+
+    load = np.zeros((J_num, 3))  # 第一列是每个基站的down资源，第二列up资源，第三列compute资源
+    load += 6
 
     # RHO=np.zeros((S,3))
     for i in range(S):
