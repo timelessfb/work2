@@ -184,7 +184,7 @@ def opt(X_map, I, ROH, S, J_num, load, T):
 
     solution = minimize(objective, z0, method='SLSQP', bounds=bnds, constraints=cons)
     x = solution.x
-    return x
+    return x, cost(0, z0, X_map, I, ROH, S, J_num, load, T)
 
 
 if __name__ == '__main__':
