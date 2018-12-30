@@ -74,6 +74,14 @@ def ValCount(X_map, S, J_num):
                 o += 1
 
 
+def UnSelectBS(X_map, S, J_num):
+    o = []
+    for s in range(S):
+        if np.max(X_map[s][0:J_num]) == 1:  # todo(*风险点)
+            o.append(s)
+    return o
+
+
 def ResourceConstraint(resorce_type, z, j, X_map, I, ROH, S, J_num, load):
     x_indexs = []
     y_indexs = []
@@ -120,10 +128,6 @@ def EqConstraint(z, s, X_map, I, ROH, S, J_num, load):
     return o
 
 
-def objective(x):
-    return x[0] ** 3 - x[1] ** 3 - x[0] * x[1] + 2 * x[0] ** 2
-
-
 def cost(type, z, X_map, I, ROH, S, J_num, load, T):
     alpha = 1
     beta = 1
@@ -167,7 +171,7 @@ def opt(X_map, I, ROH, S, J_num, load, T):
         cons.append(
             {'type': 'ineq', 'fun': lambda z: ResourceConstraint('compute', z, j, X_map, I, ROH, S, J_num, load)})
     for s in range(S):
-        if np.max(X_map[s]) == 1:  # 已经选定了基站
+        if np.max(X_map[s][0:J_num]) == 1:  # 已经选定了基站 todo(*风险点)
             continue
         cons.append(
             {'type': 'eq', 'fun': lambda z: EqConstraint(z, s, X_map, I, ROH, S, J_num, load)})
@@ -183,8 +187,31 @@ def opt(X_map, I, ROH, S, J_num, load, T):
     # todo(*做初始资源分配)
 
     solution = minimize(objective, z0, method='SLSQP', bounds=bnds, constraints=cons)
-    x = solution.x
-    return x, cost(0, z0, X_map, I, ROH, S, J_num, load, T)
+    # todo(*查一下这句有没有问题)
+    z = solution.x
+    return z, cost(0, z, X_map, I, ROH, S, J_num, load, T)
+
+
+def solve(X_map, I, ROH, S, J_num, load, T):
+    for s in range(S):
+        z, cost = opt(X_map, I, ROH, S, J_num, load, T)
+        # todo(*可以优化)
+        max_z = -1
+        max_z_index = -1
+        for i in range(np.size(z)):
+            if z[i] > max_z:
+                l_x, l_y = ZtoX(i, X_map, S, J_num)
+                if l_y != J_num:
+                    max_z_index = i
+        l_x, l_y = ZtoX(max_z_index, X_map, S, J_num)
+        for j in range(J_num):
+            X_map[l_x][j] = -1
+        X_map[l_x][l_y] = 1
+    # 确定为所有的基站，求解Js
+    z, cost = opt(X_map, I, ROH, S, J_num, load, T)
+    for s in range(S):
+        X_map[s][J_num] = z[i]
+    return X_map
 
 
 if __name__ == '__main__':
@@ -194,6 +221,7 @@ if __name__ == '__main__':
     # 初始位置
     I = np.zeros(S, dtype=int)
     # 暂时初始化,后边需要改
+    # todo(*还没仔细处理)
     for i in range(S):
         I[i] = i % J_num
 
