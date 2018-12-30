@@ -45,6 +45,8 @@ x = solution.x
 # show final objective
 print('Final SSE Objective: ' + str(objective(x)))
 
+print(type(a))
+print(type(b))
 # print solution
 print('Solution')
 print('x1 = ' + str(x[0]))

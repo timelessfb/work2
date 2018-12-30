@@ -112,7 +112,46 @@ def EqConstraint(z, s, X_map, I, ROH, S, J_num, load):
     return o
 
 
-def foo(X_map, I, ROH, S, J_num, load):
+def objective(x):
+    return x[0] ** 3 - x[1] ** 3 - x[0] * x[1] + 2 * x[0] ** 2
+
+
+def cost(type, z, X_map, I, ROH, S, J_num, load, T):
+    alpha = 1
+    beta = 1
+
+    o1 = 0
+    for s in range(S):
+        o1 += (1 - z[XtoZ(s, J_num, X_map, S, J_num)])
+    o1 *= alpha * T
+
+    o2 = 0
+    for s in range(S):
+        i = I[s]
+        for j in range(J_num):
+            if X_map[s][j] == 0:
+                if j != i:
+                    o2 += z[XtoZ(s, j, X_map, S, J_num)]
+    o2 *= beta
+
+    if type == 0:
+        return o1 + o2
+    if type == 1:
+        return o1
+    if type == 2:
+        return o2
+
+
+def foo(X_map, I, ROH, S, J_num, load, T):
+    # 设置界
+    bnd = (0, 1)
+    bnds = []
+    for s in range(S):
+        for j in range(J_num + 1):
+            if X_map[s][j] == 0:
+                bnds.append(bnd)
+
+    # 设置约束
     cons = []
     for j in range(J_num):
         cons.append({'type': 'ineq', 'fun': lambda z: ResourceConstraint('down', z, j, X_map, I, ROH, S, J_num, load)})
@@ -124,6 +163,9 @@ def foo(X_map, I, ROH, S, J_num, load):
             continue
         cons.append(
             {'type': 'eq', 'fun': lambda z: EqConstraint(z, s, X_map, I, ROH, S, J_num, load)})
+
+    # 设置目标
+    objective = lambda z: cost(0, z, X_map, I, ROH, S, J_num, load, T)
 
 
 if __name__ == '__main__':
@@ -138,7 +180,7 @@ if __name__ == '__main__':
 
     X_map = np.random.binomial(1, 0.5, [S, J_num])
     X_map -= 1
-    X_map = np.c_[X_map, np.zeros(S)]
+    X_map = np.c_[X_map, np.zeros(S)]  # X_map中0就是变量,1代表s映射到j或者ys=1,-1代表不可选基站
 
     load = np.zeros((J_num, 3))  # 第一列是每个基站的down资源，第二列up资源，第三列compute资源
     load += 6
