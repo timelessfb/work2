@@ -69,28 +69,47 @@ def XtoZ(l_x, l_y, X_map, S, J_num):
 def ResourceConstraint(resorce_type, z, j, X_map, I, ROH, S, J_num, load):
     x_indexs = []
     y_indexs = []
+    y_selected_indexs = []
+
     s_in_j = []
     for s in range(S):
         if X_map[s][j] == 0:
             x_indexs.append(XtoZ(s, j, X_map, S, J_num))
             y_indexs.append(XtoZ(s, J_num, X_map, S, J_num))
             s_in_j.append(s)
+    for s in range(S):
+        if X_map[s][j] == 1:
+            y_selected_indexs.append(XtoZ(s, J_num, X_map, S, J_num))
+
     if resorce_type == 'down':
         o = load[j][0]
         for i in range(len(x_indexs)):
             o -= z[x_indexs[i]] * z[y_indexs[i]] * ROH[s][0]
-            return o
+        for i in range(len(y_selected_indexs)):
+            o -= z[y_selected_indexs[i]] * ROH[s][0]
+
     if resorce_type == 'up':
         o = load[j][1]
         for i in range(len(x_indexs)):
             o -= z[x_indexs[i]] * z[y_indexs[i]] * ROH[s][1]
-        return o
+        for i in range(len(y_selected_indexs)):
+            o -= z[y_selected_indexs[i]] * ROH[s][1]
 
     if resorce_type == 'compute':
         o = load[j][2]
         for i in range(len(x_indexs)):
             o -= z[x_indexs[i]] * z[y_indexs[i]] * ROH[s][2]
-        return o
+        for i in range(len(y_selected_indexs)):
+            o -= z[y_selected_indexs[i]] * ROH[s][2]
+    return o
+
+
+def EqConstraint(z, s, X_map, I, ROH, S, J_num, load):
+    o = 0
+    for j in range(J_num):
+        if X_map[s][j] == 0:
+            o -= z[XtoZ(s, j, X_map, S, J_num)]
+    return o
 
 
 def foo(X_map, I, ROH, S, J_num, load):
@@ -100,6 +119,11 @@ def foo(X_map, I, ROH, S, J_num, load):
         cons.append({'type': 'ineq', 'fun': lambda z: ResourceConstraint('up', z, j, X_map, I, ROH, S, J_num, load)})
         cons.append(
             {'type': 'ineq', 'fun': lambda z: ResourceConstraint('compute', z, j, X_map, I, ROH, S, J_num, load)})
+    for s in range(S):
+        if np.max(X_map[s]) == 1:  # 已经选定了基站
+            continue
+        cons.append(
+            {'type': 'eq', 'fun': lambda z: EqConstraint(z, s, X_map, I, ROH, S, J_num, load)})
 
 
 if __name__ == '__main__':
