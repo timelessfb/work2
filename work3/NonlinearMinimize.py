@@ -72,6 +72,7 @@ def ValCount(X_map, S, J_num):
         for j in range(J_num + 1):
             if X_map[s][j] == 0:
                 o += 1
+    return o
 
 
 def UnSelectBS(X_map, S, J_num):
@@ -180,11 +181,12 @@ def opt(X_map, I, ROH, S, J_num, load, T):
     objective = lambda z: cost(0, z, X_map, I, ROH, S, J_num, load, T)
 
     # 设置初始值z0
+    print(X_map)
     z0 = np.zeros(ValCount(X_map, S, J_num))
     for s in range(S):
         if XtoZ(s, I[s], X_map, S, J_num) != -1:
-            z0[XtoZ(s, I[s], X_map, S, J_num)]
-    # todo(*做初始资源分配)
+            z0[XtoZ(s, I[s], X_map, S, J_num)] = 1
+    # todo(*做初始资源分配,即ys暂时都定位0)
 
     solution = minimize(objective, z0, method='SLSQP', bounds=bnds, constraints=cons)
     # todo(*查一下这句有没有问题)
@@ -209,25 +211,34 @@ def solve(X_map, I, ROH, S, J_num, load, T):
         X_map[l_x][l_y] = 1
     # 确定为所有的基站，求解Js
     z, cost = opt(X_map, I, ROH, S, J_num, load, T)
+    print(S)
     for s in range(S):
-        X_map[s][J_num] = z[i]
-    return X_map
+        X_map[s][J_num] = z[s]
+    return X_map, cost
 
 
 if __name__ == '__main__':
     # 初始参数
     S = 18
-    J_num = 6
-    # 初始位置
-    I = np.zeros(S, dtype=int)
-    # 暂时初始化,后边需要改
-    # todo(*还没仔细处理)
-    for i in range(S):
-        I[i] = i % J_num
 
+    # 基站数目
+    J_num = 6
+
+    # 定义T
+    T = 1
+
+    # 可选基站集合 todo(*可能有的切片一个基站都不能选)
     X_map = np.random.binomial(1, 0.5, [S, J_num])
     X_map -= 1
     X_map = np.c_[X_map, np.zeros(S)]  # X_map中0就是变量,1代表s映射到j或者ys=1,-1代表不可选基站
+
+    # 初始位置
+    I = np.zeros(S, dtype=int)
+    # 暂时初始化,后边需要改
+    # todo(*还没仔细处理第一次映射，可以采用映射部分的算法)
+    for s in range(S):
+        candidate_bs_of_s = np.where(X_map[s][0:J_num] == 0)
+        I[s] = candidate_bs_of_s[0][0]
 
     load = np.zeros((J_num, 3))  # 第一列是每个基站的down资源，第二列up资源，第三列compute资源
     load += 6
@@ -235,6 +246,8 @@ if __name__ == '__main__':
     # RHO=np.zeros((S,3))
     for i in range(S):
         RHO = slices(S)
-    print(RHO)
 
-    # for iter in range(10):
+    X_map_o, cost = solve(X_map, I, RHO, S, J_num, load, T)
+
+    print(X_map)
+    print(cost)
