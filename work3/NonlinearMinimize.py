@@ -2,7 +2,7 @@
 # -*- coding:utf-8 -*-
 # import numpy as np
 import numpy as np
-from scipy import stats
+from scipy.optimize import minimize
 
 
 def slice(lowbound=1, upbound=10):
@@ -166,6 +166,9 @@ def foo(X_map, I, ROH, S, J_num, load, T):
 
     # 设置目标
     objective = lambda z: cost(0, z, X_map, I, ROH, S, J_num, load, T)
+
+    solution = minimize(objective, z0, method='SLSQP', \
+                        bounds=bnds, constraints=cons)
 
 
 if __name__ == '__main__':
