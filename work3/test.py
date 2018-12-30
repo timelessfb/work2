@@ -14,13 +14,6 @@ def constraint2(x):
     return 2.0 - x[0] * x[1]
 
 
-def s1(i, x):
-    if i == 1:
-        return x[0] - x[1]
-    else:
-        return x[0] + [1]
-
-
 # initial guesses
 n = 2
 x0 = np.zeros(n)
@@ -33,11 +26,9 @@ print('Initial SSE Objective: ' + str(objective(x0)))
 # optimize
 b = (0.0, 3.0)
 bnds = (b, b)
-con1 = {'type': 'ineq', 'fun': lambda x: s1(1,x)}
-con2 = {'type': 'eq', 'fun': lambda x: 2.0 - x[0] * x[1]}
+con1 = {'type': 'ineq', 'fun': constraint1}
+con2 = {'type': 'eq', 'fun': constraint2}
 cons = ([con1, con2])
-print(cons)
-print(type(cons))
 solution = minimize(objective, x0, method='SLSQP', \
                     bounds=bnds, constraints=cons)
 x = solution.x
@@ -45,8 +36,6 @@ x = solution.x
 # show final objective
 print('Final SSE Objective: ' + str(objective(x)))
 
-print(type(a))
-print(type(b))
 # print solution
 print('Solution')
 print('x1 = ' + str(x[0]))

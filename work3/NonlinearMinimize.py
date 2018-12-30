@@ -66,6 +66,14 @@ def XtoZ(l_x, l_y, X_map, S, J_num):
     return t
 
 
+def ValCount(X_map, S, J_num):
+    o = 0
+    for s in range(S):
+        for j in range(J_num + 1):
+            if X_map[s][j] == 0:
+                o += 1
+
+
 def ResourceConstraint(resorce_type, z, j, X_map, I, ROH, S, J_num, load):
     x_indexs = []
     y_indexs = []
@@ -142,7 +150,7 @@ def cost(type, z, X_map, I, ROH, S, J_num, load, T):
         return o2
 
 
-def foo(X_map, I, ROH, S, J_num, load, T):
+def opt(X_map, I, ROH, S, J_num, load, T):
     # 设置界
     bnd = (0, 1)
     bnds = []
@@ -167,8 +175,16 @@ def foo(X_map, I, ROH, S, J_num, load, T):
     # 设置目标
     objective = lambda z: cost(0, z, X_map, I, ROH, S, J_num, load, T)
 
-    solution = minimize(objective, z0, method='SLSQP', \
-                        bounds=bnds, constraints=cons)
+    # 设置初始值z0
+    z0 = np.zeros(ValCount(X_map, S, J_num))
+    for s in range(S):
+        if XtoZ(s, I[s], X_map, S, J_num) != -1:
+            z0[XtoZ(s, I[s], X_map, S, J_num)]
+    # todo(*做初始资源分配)
+
+    solution = minimize(objective, z0, method='SLSQP', bounds=bnds, constraints=cons)
+    x = solution.x
+    return x
 
 
 if __name__ == '__main__':
