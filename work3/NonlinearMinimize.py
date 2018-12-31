@@ -84,39 +84,51 @@ def UnSelectBS(X_map, S, J_num):
 
 
 def ResourceConstraint(resorce_type, z, j, X_map, I, ROH, S, J_num, load):
+    # X_map中第j列为0的位置对应z中的index
     x_indexs = []
+    # X_map中第j列为0的位置，该行为s切片，找到s行行模ys变量对应z中的index
     y_indexs = []
+    # 保存找到确定映射到基站j的切片，即X_map中第j列为1的位置
     y_selected_indexs = []
 
-    s_in_j = []
+    # 记录在j上部署切片s
+    s_in_j_partly = []
+    s_in_j_all = []
     for s in range(S):
         if X_map[s][j] == 0:
             x_indexs.append(XtoZ(s, j, X_map, S, J_num))
             y_indexs.append(XtoZ(s, J_num, X_map, S, J_num))
-            s_in_j.append(s)
+            s_in_j_partly.append(s)
     for s in range(S):
         if X_map[s][j] == 1:
             y_selected_indexs.append(XtoZ(s, J_num, X_map, S, J_num))
+            s_in_j_all.append(s)
     # todo(*存在bug)
     if resorce_type == 'down':
         o = load[j][0]
         for i in range(len(x_indexs)):
+            s = s_in_j_partly[i]
             o -= z[x_indexs[i]] * z[y_indexs[i]] * ROH[s][0]
         for i in range(len(y_selected_indexs)):
+            s = s_in_j_all[i]
             o -= z[y_selected_indexs[i]] * ROH[s][0]
 
     if resorce_type == 'up':
         o = load[j][1]
         for i in range(len(x_indexs)):
+            s = s_in_j_partly[i]
             o -= z[x_indexs[i]] * z[y_indexs[i]] * ROH[s][1]
         for i in range(len(y_selected_indexs)):
+            s = s_in_j_all[i]
             o -= z[y_selected_indexs[i]] * ROH[s][1]
 
     if resorce_type == 'compute':
         o = load[j][2]
         for i in range(len(x_indexs)):
+            s = s_in_j_partly[i]
             o -= z[x_indexs[i]] * z[y_indexs[i]] * ROH[s][2]
         for i in range(len(y_selected_indexs)):
+            s = s_in_j_all[i]
             o -= z[y_selected_indexs[i]] * ROH[s][2]
     return o
 
