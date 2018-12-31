@@ -84,8 +84,7 @@ def UnSelectBS(X_map, S, J_num):
 
 
 def ResourceConstraint(resorce_type, z, j, X_map, I, ROH, S, J_num, load):
-    if j!=5:
-        print(j)
+
     # X_map中第j列为0的位置对应z中的index
     x_indexs = []
     # X_map中第j列为0的位置，该行为s切片，找到s行行模ys变量对应z中的index

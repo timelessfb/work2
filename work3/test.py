@@ -8,25 +8,18 @@ import copy
 
 def fun(type, x):
     def f1(x):
-        return x[0]-x[1]
-    def f2(x):
-        return x[0]+x[1]
-    if type==1:
-        return f1
-    else:return f2
-
-    a = x[0]
-    b = x[1]
-    if type == 1:
-        return a + b
-    else:
-        return a - b
+        if type == 1:
+            return x[0] - x[1]
+        else:
+            return x[0] + x[1]
+    return f1
 
 
 cons = []
-s=[0,1]
+s = [0, 1]
 for i in s:
-    cons.append(lambda x: fun(i, x))
+    cons.append(fun(i,s))
+
 # cons.append(lambda x:fun(1,x))
 # cons.append(lambda x:fun(0,x))
 # f1=lambda x:fun(0,x)
