@@ -84,6 +84,8 @@ def UnSelectBS(X_map, S, J_num):
 
 
 def ResourceConstraint(resorce_type, z, j, X_map, I, ROH, S, J_num, load):
+    if j!=5:
+        print(j)
     # X_map中第j列为0的位置对应z中的index
     x_indexs = []
     # X_map中第j列为0的位置，该行为s切片，找到s行行模ys变量对应z中的index
@@ -133,8 +135,9 @@ def ResourceConstraint(resorce_type, z, j, X_map, I, ROH, S, J_num, load):
     return o
 
 
+# 对于s,xij=1
 def EqConstraint(z, s, X_map, I, ROH, S, J_num, load):
-    o = 0
+    o = 1
     for j in range(J_num):
         if X_map[s][j] == 0:
             o -= z[XtoZ(s, j, X_map, S, J_num)]
@@ -194,6 +197,7 @@ def opt(X_map, I, ROH, S, J_num, load, T):
 
     # 设置初始值z0
     z0 = np.zeros(ValCount(X_map, S, J_num))
+    # 初始值为每个切片任意找一个基站作为初始基站，ys赋值为0，则一定是一个可行解
     for s in range(S):
         if XtoZ(s, I[s], X_map, S, J_num) != -1:
             z0[XtoZ(s, I[s], X_map, S, J_num)] = 1
@@ -209,12 +213,14 @@ def solve(X_map, I, ROH, S, J_num, load, T):
     for s in range(S):
         z, cost = opt(X_map, I, ROH, S, J_num, load, T)
         # todo(*可以优化)
+        # 记录最大的xij，并令xij=1
         max_z = -1
         max_z_index = -1
         for i in range(np.size(z)):
             if z[i] > max_z:
                 l_x, l_y = ZtoX(i, X_map, S, J_num)
-                if l_y != J_num:
+                if l_y != J_num:  # 排除z[i]=ys的情况
+                    max_z = z[i]
                     max_z_index = i
         l_x, l_y = ZtoX(max_z_index, X_map, S, J_num)
         for j in range(J_num):
@@ -254,7 +260,7 @@ if __name__ == '__main__':
     # 初始位置
     I = np.zeros(S, dtype=int)
     # 暂时初始化,后边需要改
-    # todo(*还没仔细处理第一次映射，可以采用映射部分的算法)
+    # todo(*还没仔细处理第一次映射，后续可以采用映射部分的算法)
     for s in range(S):
         candidate_bs_of_s = np.where(X_map[s][0:J_num] == 0)
         I[s] = candidate_bs_of_s[0][0]
