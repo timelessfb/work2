@@ -193,7 +193,7 @@ def opt(X_map, I, ROH, S, J_num, load, T):
             {'type': 'eq', 'fun': lambda z, s=s: EqConstraint(z, s, X_map, I, ROH, S, J_num, load)})
 
     # 设置目标
-    objective = lambda z: cost(0, z, X_map, I, ROH, S, J_num, load, T)
+    objective = lambda z: cost(1, z, X_map, I, ROH, S, J_num, load, T)
 
     # 设置初始值z0
     z0 = np.zeros(ValCount(X_map, S, J_num))
@@ -206,7 +206,7 @@ def opt(X_map, I, ROH, S, J_num, load, T):
     solution = minimize(objective, z0, method='SLSQP', bounds=bnds, constraints=cons)
     # todo(*查一下这句有没有问题)
     z = solution.x
-    return z, cost(0, z, X_map, I, ROH, S, J_num, load, T)
+    return z, cost(1, z, X_map, I, ROH, S, J_num, load, T)
 
 
 def solve(X_map, I, ROH, S, J_num, load, T):
@@ -257,6 +257,7 @@ if __name__ == '__main__':
         j = np.random.randint(0, J_num, 1)
         X_map[s][j] = 1
     X_map -= 1
+    X_map = np.zeros((S, J_num))
     X_map = np.c_[X_map, np.zeros(S)]  # X_map中0就是变量,1代表s映射到j或者ys=1,-1代表不可选基站
     X_map_init = np.copy(X_map)  # 深拷贝一份可选基站集合
     print(X_map_init)
@@ -264,19 +265,20 @@ if __name__ == '__main__':
     # 初始位置
     I = np.zeros(S, dtype=int)
     # 暂时初始化,后边需要改
-    # todo(*还没仔细处理第一次映射，后续可以采用映射部分的算法)
-    for s in range(S):
-        candidate_bs_of_s = np.where(X_map[s][0:J_num] == 0)
-        I[s] = candidate_bs_of_s[0][0]
-    print(I)
+    # # todo(*还没仔细处理第一次映射，后续可以采用映射部分的算法)
+    # for s in range(S):
+    #     candidate_bs_of_s = np.where(X_map[s][0:J_num] == 0)
+    #     I[s] = candidate_bs_of_s[0][0]
+    # print(I)
 
     load = np.zeros((J_num, 3))  # 第一列是每个基站的down资源，第二列up资源，第三列compute资源
     load += 0.5
 
-    # RHO=np.zeros((S,3))
-    for i in range(S):
-        RHO = slices(S)
-    RHO[0] = RHO[0] * 100
+    RHO = np.zeros((S, 3))
+    RHO += 0.1
+    # for i in range(S):
+    #     RHO = 0.1
+    # RHO[0] = RHO[0] * 100
     print(RHO)
 
     X_map_o, cost = solve(X_map, I, RHO, S, J_num, load, T)

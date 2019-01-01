@@ -273,9 +273,8 @@ if __name__ == '__main__':
     load = np.zeros((J_num, 3))  # 第一列是每个基站的down资源，第二列up资源，第三列compute资源
     load += 0.5
 
-    # RHO=np.zeros((S,3))
-    for i in range(S):
-        RHO = slices(S)
+    # 随机生成切片
+    RHO = slices(S)
     RHO[0] = RHO[0] * 100
     print(RHO)
 
