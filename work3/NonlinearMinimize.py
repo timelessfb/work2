@@ -206,12 +206,16 @@ def opt(X_map, I, ROH, S, J_num, load, T):
     solution = minimize(objective, z0, method='SLSQP', bounds=bnds, constraints=cons)
     # todo(*查一下这句有没有问题)
     z = solution.x
-    return z, cost(0, z, X_map, I, ROH, S, J_num, load, T)
+    return z, cost(0, z, X_map, I, ROH, S, J_num, load, T), cost(1, z, X_map, I, ROH, S, J_num, load, T), cost(2, z,
+                                                                                                               X_map, I,
+                                                                                                               ROH, S,
+                                                                                                               J_num,
+                                                                                                               load, T)
 
 
 def solve(X_map, I, ROH, S, J_num, load, T):
     for s in range(S):
-        z, cost = opt(X_map, I, ROH, S, J_num, load, T)
+        z, cost_all, cost_d, cost_m = opt(X_map, I, ROH, S, J_num, load, T)
         # todo(*可以优化)
         # 记录最大的xij，并令xij=1
         max_z = -1
@@ -231,10 +235,10 @@ def solve(X_map, I, ROH, S, J_num, load, T):
         print(max_z)
         X_map[l_x][l_y] = 1
     # 确定为所有的基站，求解Js
-    z, cost = opt(X_map, I, ROH, S, J_num, load, T)
+    z, cost_all, cost_d, cost_m = opt(X_map, I, ROH, S, J_num, load, T)
     for s in range(S):
         X_map[s][J_num] = z[s]
-    return X_map, cost
+    return X_map, z, cost_all, cost_d, cost_m
 
 
 if __name__ == '__main__':
@@ -277,11 +281,12 @@ if __name__ == '__main__':
     RHO = slices(S)
     RHO[0] = RHO[0] * 100
     print(RHO)
-
-    X_map_o, cost = solve(X_map, I, RHO, S, J_num, load, T)
+    X_map_o, z, cost_all, cost_d, cost_m = solve(X_map, I, RHO, S, J_num, load, T)
 
     selected_bs = np.where(X_map[:][0:J_num] == 1)
     print(selected_bs)
 
     print(X_map_o)
-    print(cost)
+    print(cost_all)
+    print(cost_d)
+    print(cost_m)

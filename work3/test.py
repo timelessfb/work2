@@ -155,8 +155,8 @@ def cost(type, z, X_map, I, ROH, S, J_num, load, T):
     for s in range(S):
         i = I[s]
         for j in range(J_num):
-            if X_map[s][j] == 0:
-                if j != i:
+            if X_map[s][j] != -1:  # 找到s切片映射的基站j，注意X_map[s][j]对应的xij可能为小数，表示部分映射
+                if j != i:  # 找到发生迁移的部分切片（因为xij可能为小数）
                     o2 += z[XtoZ(s, j, X_map, S, J_num)]
     o2 *= beta
 
@@ -193,7 +193,7 @@ def opt(X_map, I, ROH, S, J_num, load, T):
             {'type': 'eq', 'fun': lambda z, s=s: EqConstraint(z, s, X_map, I, ROH, S, J_num, load)})
 
     # 设置目标
-    objective = lambda z: cost(1, z, X_map, I, ROH, S, J_num, load, T)
+    objective = lambda z: cost(2, z, X_map, I, ROH, S, J_num, load, T)
 
     # 设置初始值z0
     z0 = np.zeros(ValCount(X_map, S, J_num))
@@ -206,12 +206,16 @@ def opt(X_map, I, ROH, S, J_num, load, T):
     solution = minimize(objective, z0, method='SLSQP', bounds=bnds, constraints=cons)
     # todo(*查一下这句有没有问题)
     z = solution.x
-    return z, cost(1, z, X_map, I, ROH, S, J_num, load, T)
+    return z, cost(0, z, X_map, I, ROH, S, J_num, load, T), cost(1, z, X_map, I, ROH, S, J_num, load, T), cost(2, z,
+                                                                                                               X_map, I,
+                                                                                                               ROH, S,
+                                                                                                               J_num,
+                                                                                                               load, T)
 
 
 def solve(X_map, I, ROH, S, J_num, load, T):
     for s in range(S):
-        z, cost = opt(X_map, I, ROH, S, J_num, load, T)
+        z, cost_all, cost_d, cost_m = opt(X_map, I, ROH, S, J_num, load, T)
         # todo(*可以优化)
         # 记录最大的xij，并令xij=1
         max_z = -1
@@ -231,10 +235,10 @@ def solve(X_map, I, ROH, S, J_num, load, T):
         print(max_z)
         X_map[l_x][l_y] = 1
     # 确定为所有的基站，求解Js
-    z, cost = opt(X_map, I, ROH, S, J_num, load, T)
+    z, cost_all, cost_d, cost_m = opt(X_map, I, ROH, S, J_num, load, T)
     for s in range(S):
         X_map[s][J_num] = z[s]
-    return X_map, cost
+    return X_map, z, cost_all, cost_d, cost_m
 
 
 if __name__ == '__main__':
@@ -275,16 +279,16 @@ if __name__ == '__main__':
     load += 0.5
 
     RHO = np.zeros((S, 3))
-    RHO += 0.1
+    RHO += 0.15
     # for i in range(S):
     #     RHO = 0.1
     # RHO[0] = RHO[0] * 100
     print(RHO)
 
-    X_map_o, cost = solve(X_map, I, RHO, S, J_num, load, T)
+    X_map_o, z, cost_all, cost_d, cost_m = solve(X_map, I, RHO, S, J_num, load, T)
 
     selected_bs = np.where(X_map[:][0:J_num] == 1)
-    print(selected_bs)
-
     print(X_map_o)
-    print(cost)
+    print(cost_all)
+    print(cost_d)
+    print(cost_m)
