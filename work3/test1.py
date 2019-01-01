@@ -84,7 +84,6 @@ def UnSelectBS(X_map, S, J_num):
 
 
 def ResourceConstraint(resorce_type, z, j, X_map, I, ROH, S, J_num, load):
-
     # X_map中第j列为0的位置对应z中的index
     x_indexs = []
     # X_map中第j列为0的位置，该行为s切片，找到s行行模ys变量对应z中的index
@@ -181,16 +180,18 @@ def opt(X_map, I, ROH, S, J_num, load, T):
     # 设置约束
     cons = []
     for j in range(J_num):
-        f1=ResourceConstraint('down', z, j, X_map, I, ROH, S, J_num, load)
-        cons.append({'type': 'ineq', 'fun': f1})
-        cons.append({'type': 'ineq', 'fun': lambda z: ResourceConstraint('up', z, j, X_map, I, ROH, S, J_num, load)})
         cons.append(
-            {'type': 'ineq', 'fun': lambda z: ResourceConstraint('compute', z, j, X_map, I, ROH, S, J_num, load)})
+            {'type': 'ineq', 'fun': lambda z, j=j: ResourceConstraint('down', z, j, X_map, I, ROH, S, J_num, load)})
+        cons.append(
+            {'type': 'ineq', 'fun': lambda z, j=j: ResourceConstraint('up', z, j, X_map, I, ROH, S, J_num, load)})
+        cons.append(
+            {'type': 'ineq', 'fun': lambda z, j=j: ResourceConstraint('compute', z, j, X_map, I, ROH, S, J_num, load)})
+
     for s in range(S):
         if np.max(X_map[s][0:J_num]) == 1:  # 已经选定了基站 todo(*风险点)
             continue
         cons.append(
-            {'type': 'eq', 'fun': lambda z: EqConstraint(z, s, X_map, I, ROH, S, J_num, load)})
+            {'type': 'eq', 'fun': lambda z, s=s: EqConstraint(z, s, X_map, I, ROH, S, J_num, load)})
 
     # 设置目标
     objective = lambda z: cost(0, z, X_map, I, ROH, S, J_num, load, T)
