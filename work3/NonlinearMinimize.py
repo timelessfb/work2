@@ -226,7 +226,7 @@ def opt(X_map, I, ROH, S, J_num, load, alpha, beta):
 def solve(X_map, I, ROH, S, J_num, load, alpha=1, beta=1):
     for s in range(S):
         z, cost_all, cost_d, cost_m = opt(X_map, I, ROH, S, J_num, load, alpha, beta)
-        # todo(*可以优化)
+        # todo(*可以优化，比如设置大于一个阈值，就令xij=1)
         # 记录最大的xij，并令xij=1
         max_z = -1
         max_z_index = -1
@@ -312,6 +312,7 @@ if __name__ == '__main__':
 
     # 参数4：初始位置
     I = np.zeros(S, dtype=int)
+    I -= 1
     # todo(*还没仔细处理第一次映射，后续可以采用映射部分的算法)
     for s in range(S):
         candidate_bs_of_s = np.where(X_map[s][0:J_num] == 0)
