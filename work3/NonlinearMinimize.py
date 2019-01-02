@@ -141,7 +141,6 @@ def EqConstraint(z, s, X_map, I, ROH, S, J_num, load):
     return o
 
 
-# todo(*参数待调整)
 def cost(type, z, X_map, I, ROH, S, J_num, load, alpha, beta):
     o1 = 0
     for s in range(S):
@@ -312,11 +311,11 @@ if __name__ == '__main__':
 
     # 参数4：初始位置
     I = np.zeros(S, dtype=int)
-    I -= 1
+    I -= 1  # -1表示是第一次映射，非迁移
     # todo(*还没仔细处理第一次映射，后续可以采用映射部分的算法)
-    for s in range(S):
-        candidate_bs_of_s = np.where(X_map[s][0:J_num] == 0)
-        I[s] = candidate_bs_of_s[0][0]
+    # for s in range(S):
+    #     candidate_bs_of_s = np.where(X_map[s][0:J_num] == 0)
+    #     I[s] = candidate_bs_of_s[0][0]
 
     # 参数5：基站的资源
     load = np.zeros((J_num, 3))  # 第一列是每个基站的down资源，第二列up资源，第三列compute资源
@@ -325,6 +324,9 @@ if __name__ == '__main__':
     # 参数6：切片参数，C_req_s_down，C_req_s_up,C_req_s_compute,随机生成
     RHO = slices(S)
 
+    # todo(*参数待调整)
+    alpha = 1 / 3  # 参数待调整
+    beta = 1  # 参数待调整
     #################################################################################################################
     X_map_o, z, cost_all, cost_d, cost_m = solve(X_map, I, RHO, S, J_num, load)
 
