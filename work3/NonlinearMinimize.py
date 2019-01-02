@@ -103,7 +103,6 @@ def ResourceConstraint(resorce_type, z, j, X_map, I, ROH, S, J_num, load):
         if X_map[s][j] == 1:
             y_selected_indexs.append(XtoZ(s, J_num, X_map, S, J_num))
             s_in_j_all.append(s)
-    # todo(*存在bug)
     if resorce_type == 'down':
         o = load[j][0]
         for i in range(len(x_indexs)):
@@ -143,6 +142,7 @@ def EqConstraint(z, s, X_map, I, ROH, S, J_num, load):
 
 
 def cost(type, z, X_map, I, ROH, S, J_num, load):
+    # todo(*参数待调整)
     alpha = 1 / (3 * S)
     beta = 1 / S
 
@@ -167,6 +167,17 @@ def cost(type, z, X_map, I, ROH, S, J_num, load):
         return o1
     if type == 2:
         return o2
+
+
+def num_of_migration(X_map, I):
+    o = 0
+    for s in range(S):
+        i = I[s]
+        for j in range(J_num):
+            if X_map[s][j] == 1:
+                if j != i:
+                    o += 1
+    return o
 
 
 def opt(X_map, I, ROH, S, J_num, load):
@@ -239,6 +250,12 @@ def solve(X_map, I, ROH, S, J_num, load):
     z, cost_all, cost_d, cost_m = opt(X_map, I, ROH, S, J_num, load)
     for s in range(S):
         X_map[s][J_num] = z[s]
+
+    # 根据求解结果X_map，计算两部分代价，降级部分和迁移次数
+    num_migration = num_of_migration(X_map, I)
+    # todo(*此时/S应该变成beta)
+    cost_m = num_migration / S
+    cost_all = cost_d + cost_m
     return X_map, z, cost_all, cost_d, cost_m
 
 
