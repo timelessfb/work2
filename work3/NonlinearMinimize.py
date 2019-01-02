@@ -282,21 +282,22 @@ def solve(X_map, I, ROH, S, J_num, load, alpha=1, beta=1):
     return X_map, z, cost_all, cost_d, cost_m
 
 
+def alg_optimize(S, J_num, X_map, I):
+    return
+
+
 if __name__ == '__main__':
-    # 初始参数
+    ############## 初始参数
+    # 参数1:：切片数量
     S = 18
 
-    # 基站数目
+    # 参数2：基站数目
     J_num = 6
 
-    # 定义T
-    # T = 1
-
-    # 可选基站集合
+    # 参数3：可选基站集合
     X_map = np.random.binomial(1, 0.5, [S, J_num])
     candidate_bs_num = np.sum(X_map, 1)
     slices_of_candidate_bs_num_equalTo_0 = np.where(candidate_bs_num == 0)
-    print(slices_of_candidate_bs_num_equalTo_0)
     # 一个可选基站都没有的，随机为该切片选择一个
     for s in slices_of_candidate_bs_num_equalTo_0[0]:
         j = np.random.randint(0, J_num, 1)
@@ -304,24 +305,22 @@ if __name__ == '__main__':
     X_map -= 1
     X_map = np.c_[X_map, np.zeros(S)]  # X_map中0就是变量,1代表s映射到j或者ys=1,-1代表不可选基站
     X_map_init = np.copy(X_map)  # 深拷贝一份可选基站集合
-    print(X_map_init)
 
-    # 初始位置
+    # 参数4：初始位置
     I = np.zeros(S, dtype=int)
-    # 暂时初始化,后边需要改
     # todo(*还没仔细处理第一次映射，后续可以采用映射部分的算法)
     for s in range(S):
         candidate_bs_of_s = np.where(X_map[s][0:J_num] == 0)
         I[s] = candidate_bs_of_s[0][0]
-    print(I)
 
+    #参数5：基站的资源
     load = np.zeros((J_num, 3))  # 第一列是每个基站的down资源，第二列up资源，第三列compute资源
     load += 0.5
 
-    # 随机生成切片
+    # 参数6：切片参数，C_req_s_down，C_req_s_up,C_req_s_compute,随机生成
     RHO = slices(S)
-    RHO[0] = RHO[0] * 100
-    print(RHO)
+
+#################################################################################################################
     X_map_o, z, cost_all, cost_d, cost_m = solve(X_map, I, RHO, S, J_num, load)
 
     selected_bs = np.where(X_map[:][0:J_num] == 1)
