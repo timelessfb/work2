@@ -151,6 +151,8 @@ def cost(type, z, X_map, I, ROH, S, J_num, load, alpha, beta):
     o2 = 0
     for s in range(S):
         i = I[s]
+        if i == -1:  # 说明该切片是第一次映射，不存在迁移成本
+            continue
         for j in range(J_num):
             if X_map[s][j] != -1:  # 找到s切片映射的基站j，注意X_map[s][j]对应的xij可能为小数，表示部分映射
                 if j != i:  # 找到发生迁移的部分切片（因为xij可能为小数）
@@ -169,6 +171,8 @@ def num_of_migration(X_map, I):
     o = 0
     for s in range(S):
         i = I[s]
+        if i == -1:  # 说明该切片是第一次映射，不存在迁移成本
+            continue
         for j in range(J_num):
             if X_map[s][j] == 1:
                 if j != i:
@@ -313,14 +317,14 @@ if __name__ == '__main__':
         candidate_bs_of_s = np.where(X_map[s][0:J_num] == 0)
         I[s] = candidate_bs_of_s[0][0]
 
-    #参数5：基站的资源
+    # 参数5：基站的资源
     load = np.zeros((J_num, 3))  # 第一列是每个基站的down资源，第二列up资源，第三列compute资源
     load += 0.5
 
     # 参数6：切片参数，C_req_s_down，C_req_s_up,C_req_s_compute,随机生成
     RHO = slices(S)
 
-#################################################################################################################
+    #################################################################################################################
     X_map_o, z, cost_all, cost_d, cost_m = solve(X_map, I, RHO, S, J_num, load)
 
     selected_bs = np.where(X_map[:][0:J_num] == 1)

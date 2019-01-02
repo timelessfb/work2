@@ -151,6 +151,8 @@ def cost(type, z, X_map, I, ROH, S, J_num, load, alpha, beta):
     o2 = 0
     for s in range(S):
         i = I[s]
+        if i == -1:
+            continue
         for j in range(J_num):
             if X_map[s][j] != -1:  # 找到s切片映射的基站j，注意X_map[s][j]对应的xij可能为小数，表示部分映射
                 if j != i:  # 找到发生迁移的部分切片（因为xij可能为小数）
@@ -169,6 +171,8 @@ def num_of_migration(X_map, I):
     o = 0
     for s in range(S):
         i = I[s]
+        if i == -1:
+            continue
         for j in range(J_num):
             if X_map[s][j] == 1:
                 if j != i:
@@ -282,15 +286,16 @@ def solve(X_map, I, ROH, S, J_num, load, alpha=1, beta=1):
     return X_map, z, cost_all, cost_d, cost_m
 
 
+def alg_optimize(S, J_num, X_map, I):
+    return
+
+
 if __name__ == '__main__':
     # 初始参数
-    S = 18
+    S = 12
 
     # 基站数目
     J_num = 6
-
-    # 定义T
-    # T = 1
 
     # 可选基站集合
     X_map = np.random.binomial(1, 0.5, [S, J_num])
@@ -302,31 +307,34 @@ if __name__ == '__main__':
         j = np.random.randint(0, J_num, 1)
         X_map[s][j] = 1
     X_map -= 1
+    X_map = np.zeros((S, J_num))
     X_map = np.c_[X_map, np.zeros(S)]  # X_map中0就是变量,1代表s映射到j或者ys=1,-1代表不可选基站
     X_map_init = np.copy(X_map)  # 深拷贝一份可选基站集合
     print(X_map_init)
 
     # 初始位置
     I = np.zeros(S, dtype=int)
+    I -= 1
     # 暂时初始化,后边需要改
-    # todo(*还没仔细处理第一次映射，后续可以采用映射部分的算法)
-    for s in range(S):
-        candidate_bs_of_s = np.where(X_map[s][0:J_num] == 0)
-        I[s] = candidate_bs_of_s[0][0]
-    print(I)
+    # # todo(*还没仔细处理第一次映射，后续可以采用映射部分的算法)
+    # for s in range(S):
+    #     candidate_bs_of_s = np.where(X_map[s][0:J_num] == 0)
+    #     I[s] = candidate_bs_of_s[0][0]
+    # print(I)
 
     load = np.zeros((J_num, 3))  # 第一列是每个基站的down资源，第二列up资源，第三列compute资源
     load += 0.5
 
-    # 随机生成切片
-    RHO = slices(S)
-    RHO[0] = RHO[0] * 100
+    RHO = np.zeros((S, 3))
+    RHO += 0.25
+    # for i in range(S):
+    #     RHO = 0.1
+    # RHO[0] = RHO[0] * 100
     print(RHO)
+
     X_map_o, z, cost_all, cost_d, cost_m = solve(X_map, I, RHO, S, J_num, load)
 
     selected_bs = np.where(X_map[:][0:J_num] == 1)
-    print(selected_bs)
-
     print(X_map_o)
     print(cost_all)
     print(cost_d)
