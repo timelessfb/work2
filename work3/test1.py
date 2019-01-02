@@ -2,7 +2,7 @@
 # -*- coding:utf-8 -*-
 # import numpy as np
 import numpy as np
-from scipy.optimize import minimize
+from scipy.optimize import minimize, linprog
 
 
 def slice(lowbound=1, upbound=10):
@@ -103,7 +103,6 @@ def ResourceConstraint(resorce_type, z, j, X_map, I, ROH, S, J_num, load):
         if X_map[s][j] == 1:
             y_selected_indexs.append(XtoZ(s, J_num, X_map, S, J_num))
             s_in_j_all.append(s)
-    # todo(*存在bug)
     if resorce_type == 'down':
         o = load[j][0]
         for i in range(len(x_indexs)):
@@ -142,21 +141,19 @@ def EqConstraint(z, s, X_map, I, ROH, S, J_num, load):
     return o
 
 
-def cost(type, z, X_map, I, ROH, S, J_num, load, T):
-    alpha = 1
-    beta = 1
-
+# todo(*参数待调整)
+def cost(type, z, X_map, I, ROH, S, J_num, load, alpha, beta):
     o1 = 0
     for s in range(S):
         o1 += (1 - z[XtoZ(s, J_num, X_map, S, J_num)])
-    o1 *= alpha * T
+    o1 *= alpha
 
     o2 = 0
     for s in range(S):
         i = I[s]
         for j in range(J_num):
-            if X_map[s][j] == 0:
-                if j != i:
+            if X_map[s][j] != -1:  # 找到s切片映射的基站j，注意X_map[s][j]对应的xij可能为小数，表示部分映射
+                if j != i:  # 找到发生迁移的部分切片（因为xij可能为小数）
                     o2 += z[XtoZ(s, j, X_map, S, J_num)]
     o2 *= beta
 
@@ -168,7 +165,18 @@ def cost(type, z, X_map, I, ROH, S, J_num, load, T):
         return o2
 
 
-def opt(X_map, I, ROH, S, J_num, load, T):
+def num_of_migration(X_map, I):
+    o = 0
+    for s in range(S):
+        i = I[s]
+        for j in range(J_num):
+            if X_map[s][j] == 1:
+                if j != i:
+                    o += 1
+    return o
+
+
+def opt(X_map, I, ROH, S, J_num, load, alpha, beta):
     # 设置界
     bnd = (0, 1)
     bnds = []
@@ -186,7 +194,6 @@ def opt(X_map, I, ROH, S, J_num, load, T):
             {'type': 'ineq', 'fun': lambda z, j=j: ResourceConstraint('up', z, j, X_map, I, ROH, S, J_num, load)})
         cons.append(
             {'type': 'ineq', 'fun': lambda z, j=j: ResourceConstraint('compute', z, j, X_map, I, ROH, S, J_num, load)})
-
     for s in range(S):
         if np.max(X_map[s][0:J_num]) == 1:  # 已经选定了基站 todo(*风险点)
             continue
@@ -194,7 +201,7 @@ def opt(X_map, I, ROH, S, J_num, load, T):
             {'type': 'eq', 'fun': lambda z, s=s: EqConstraint(z, s, X_map, I, ROH, S, J_num, load)})
 
     # 设置目标
-    objective = lambda z: cost(0, z, X_map, I, ROH, S, J_num, load, T)
+    objective = lambda z: cost(0, z, X_map, I, ROH, S, J_num, load, alpha, beta)
 
     # 设置初始值z0
     z0 = np.zeros(ValCount(X_map, S, J_num))
@@ -207,12 +214,14 @@ def opt(X_map, I, ROH, S, J_num, load, T):
     solution = minimize(objective, z0, method='SLSQP', bounds=bnds, constraints=cons)
     # todo(*查一下这句有没有问题)
     z = solution.x
-    return z, cost(0, z, X_map, I, ROH, S, J_num, load, T)
+    return z, cost(0, z, X_map, I, ROH, S, J_num, load, alpha, beta), cost(1, z, X_map, I, ROH, S, J_num, load, alpha,
+                                                                           beta), cost(2, z, X_map, I, ROH, S, J_num,
+                                                                                       load, alpha, beta)
 
 
-def solve(X_map, I, ROH, S, J_num, load, T):
+def solve(X_map, I, ROH, S, J_num, load, alpha=1, beta=1):
     for s in range(S):
-        z, cost = opt(X_map, I, ROH, S, J_num, load, T)
+        z, cost_all, cost_d, cost_m = opt(X_map, I, ROH, S, J_num, load, alpha, beta)
         # todo(*可以优化)
         # 记录最大的xij，并令xij=1
         max_z = -1
@@ -223,15 +232,54 @@ def solve(X_map, I, ROH, S, J_num, load, T):
                 if l_y != J_num:  # 排除z[i]=ys的情况
                     max_z = z[i]
                     max_z_index = i
-        l_x, l_y = ZtoX(max_z_index, X_map, S, J_num)
+        l_x, l_y = ZtoX(max_z_index, X_map, S, J_num)  # l_x切片选定基站l_y
+        # 设置(l_x,l_y)处为1，l_x行其余位置为-1
         for j in range(J_num):
             X_map[l_x][j] = -1
         X_map[l_x][l_y] = 1
-    # 确定为所有的基站，求解Js
-    z, cost = opt(X_map, I, ROH, S, J_num, load, T)
+        print("确定")
+        print(l_x)
+        print(l_y)
+        print(max_z)
+
+    # 确定为所有的基站，求解Js，采用单纯形算法：min c'Y,  s.t. AY<=b, 0<=Y<=b
+    A = np.zeros((J_num * 3, S))
+    b = np.zeros(J_num * 3)
+    c = np.zeros(S)
+    c += -1
+    for j in range(J_num):
+        for s in range(S):
+            if X_map[s][j] == 1:
+                A[j * 3][s] = RHO[s][0]
+                A[j * 3 + 1][s] = RHO[s][1]
+                A[j * 3 + 2][s] = RHO[s][2]
+    for j in range(J_num):
+        b[j * 3] = load[j][0]
+        b[j * 3 + 1] = load[j][1]
+        b[j * 3 + 2] = load[j][2]
+    bnd = (0, 1)
+    bnds = []
+    # 设置ys的bound
     for s in range(S):
-        X_map[s][J_num] = z[s]
-    return X_map, cost
+        bnds.append(bnd)
+    solution = linprog(c, A_ub=A, b_ub=b, bounds=bnds)
+    ys = solution.x
+    for s in range(S):
+        X_map[s][J_num] = ys[s]
+
+    # 根据ys求解降级部分
+    cost_d = 0
+    for s in range(S):
+        cost_d += (1 - ys[s])
+    cost_d *= alpha
+
+    # 求解迁移部分
+    num_migration = num_of_migration(X_map, I)
+    cost_m = beta * num_migration
+
+    # 求解两部分代价之和
+    cost_all = cost_d + cost_m
+    return X_map, z, cost_all, cost_d, cost_m
 
 
 if __name__ == '__main__':
@@ -242,7 +290,7 @@ if __name__ == '__main__':
     J_num = 6
 
     # 定义T
-    T = 1
+    # T = 1
 
     # 可选基站集合
     X_map = np.random.binomial(1, 0.5, [S, J_num])
@@ -270,16 +318,16 @@ if __name__ == '__main__':
     load = np.zeros((J_num, 3))  # 第一列是每个基站的down资源，第二列up资源，第三列compute资源
     load += 0.5
 
-    # RHO=np.zeros((S,3))
-    for i in range(S):
-        RHO = slices(S)
+    # 随机生成切片
+    RHO = slices(S)
     RHO[0] = RHO[0] * 100
     print(RHO)
-
-    X_map_o, cost = solve(X_map, I, RHO, S, J_num, load, T)
+    X_map_o, z, cost_all, cost_d, cost_m = solve(X_map, I, RHO, S, J_num, load)
 
     selected_bs = np.where(X_map[:][0:J_num] == 1)
     print(selected_bs)
 
     print(X_map_o)
-    print(cost)
+    print(cost_all)
+    print(cost_d)
+    print(cost_m)
