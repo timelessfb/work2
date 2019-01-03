@@ -194,7 +194,7 @@ def generate_K(S, iter):
     return K
 
 
-def opt(X_map, I, ROH, S, J_num, load, alpha, beta):
+def opt(X_map, I, RHO, S, J_num, load, alpha, beta):
     # 设置界
     bnd = (0, 1)
     bnds = []
@@ -207,19 +207,19 @@ def opt(X_map, I, ROH, S, J_num, load, alpha, beta):
     cons = []
     for j in range(J_num):
         cons.append(
-            {'type': 'ineq', 'fun': lambda z, j=j: ResourceConstraint('down', z, j, X_map, I, ROH, S, J_num, load)})
+            {'type': 'ineq', 'fun': lambda z, j=j: ResourceConstraint('down', z, j, X_map, I, RHO, S, J_num, load)})
         cons.append(
-            {'type': 'ineq', 'fun': lambda z, j=j: ResourceConstraint('up', z, j, X_map, I, ROH, S, J_num, load)})
+            {'type': 'ineq', 'fun': lambda z, j=j: ResourceConstraint('up', z, j, X_map, I, RHO, S, J_num, load)})
         cons.append(
-            {'type': 'ineq', 'fun': lambda z, j=j: ResourceConstraint('compute', z, j, X_map, I, ROH, S, J_num, load)})
+            {'type': 'ineq', 'fun': lambda z, j=j: ResourceConstraint('compute', z, j, X_map, I, RHO, S, J_num, load)})
     for s in range(S):
         if np.max(X_map[s][0:J_num]) == 1:  # 已经选定了基站 todo(*风险点)
             continue
         cons.append(
-            {'type': 'eq', 'fun': lambda z, s=s: EqConstraint(z, s, X_map, I, ROH, S, J_num, load)})
+            {'type': 'eq', 'fun': lambda z, s=s: EqConstraint(z, s, X_map, I, RHO, S, J_num, load)})
 
     # 设置目标
-    objective = lambda z: cost(0, z, X_map, I, ROH, S, J_num, load, alpha, beta)
+    objective = lambda z: cost(0, z, X_map, I, RHO, S, J_num, load, alpha, beta)
 
     # 设置初始值z0
     z0 = np.zeros(ValCount(X_map, S, J_num))
@@ -232,15 +232,15 @@ def opt(X_map, I, ROH, S, J_num, load, alpha, beta):
     solution = minimize(objective, z0, method='SLSQP', bounds=bnds, constraints=cons)
     # todo(*查一下这句有没有问题)
     z = solution.x
-    return z, cost(0, z, X_map, I, ROH, S, J_num, load, alpha, beta), cost(1, z, X_map, I, ROH, S, J_num, load, alpha,
-                                                                           beta), cost(2, z, X_map, I, ROH, S, J_num,
+    return z, cost(0, z, X_map, I, RHO, S, J_num, load, alpha, beta), cost(1, z, X_map, I, RHO, S, J_num, load, alpha,
+                                                                           beta), cost(2, z, X_map, I, RHO, S, J_num,
                                                                                        load, alpha, beta)
 
 
-def solve(X_map, I, ROH, S, J_num, load, alpha=1, beta=1):
+def solve(X_map, I, RHO, S, J_num, load, alpha=1, beta=1):
     J = np.zeros(S, dtype=int)  # 记录映射结果
     for s in range(S):
-        z, cost_all, cost_d, cost_m = opt(X_map, I, ROH, S, J_num, load, alpha, beta)
+        z, cost_all, cost_d, cost_m = opt(X_map, I, RHO, S, J_num, load, alpha, beta)
         # todo(*可以优化，比如设置大于一个阈值，就令xij=1)
         # 记录最大的xij，并令xij=1
         max_z = -1
@@ -302,7 +302,15 @@ def solve(X_map, I, ROH, S, J_num, load, alpha=1, beta=1):
     return X_map, J, ys, cost_all, cost_d, cost_m
 
 
-def alg_optimize(S, J_num, X_map, I):
+def alg_optimize(S, J_num, X_map, load, RHO, I, ys, iter, K):
+    for i in range(iter):
+        RHO = RHO * K[i]
+        # todo(*计算降级函数上限)
+        d = S - np.dot(ys, 1 / K[i])
+        alpha = 1 / 3 * d
+        # todo(*计算迁移上界，有些只能在一个基站上，多算了，算了S次)
+        beta = 1 / S
+        solve(np.copy(X_map), I, RHO, S, J_num, load, alpha, beta)
     return
 
 
@@ -324,7 +332,6 @@ if __name__ == '__main__':
         X_map[s][j] = 1
     X_map -= 1
     X_map = np.c_[X_map, np.zeros(S)]  # X_map中0就是变量,1代表s映射到j或者ys=1,-1代表不可选基站
-    X_map_init = np.copy(X_map)  # 深拷贝一份可选基站集合
 
     # 参数4：基站的资源
     load = np.zeros((J_num, 3))  # 第一列是每个基站的down资源，第二列up资源，第三列compute资源
@@ -337,15 +344,16 @@ if __name__ == '__main__':
     alpha = 1 / 3 * S  # 参数待调整
     beta = 1 / S  # 参数待调整
 
-    # 参数7：初始位置
+    # 参数7：初始位置,与初始ys
     I = np.zeros(S, dtype=int)
     I -= 1  # -1表示是第一次映射，无初始的映射基站
-    X_map_o, J, ys, cost_all, cost_d, cost_m = solve(X_map, I, RHO, S, J_num, load)  # 完成第一次映射过程
+    X_map_o, J, ys, cost_all, cost_d, cost_m = solve(np.copy(X_map), I, RHO, S, J_num,
+                                                     load)  # 完成第一次映射过程 todo(*未传参alpha,beta)
     for s in range(S):
         I[s] = J[s]
 
     # 参数8：仿真图点数
-    iter = 10
+    iter = 10  # todo(*参数可调)
 
     # 参数:9：生成切片调整因子K，RHO=K[i]*RHO
     K = generate_K(S, iter)
