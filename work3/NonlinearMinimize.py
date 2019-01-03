@@ -310,7 +310,10 @@ def alg_optimize(S, J_num, X_map, load, RHO, I, ys, iter, K):
             RHO[s] *= K[i][s]
         # RHO = RHO_init * K[i]
         # todo(*计算降级函数上限，待验证1 / K[i])
-        d = S - np.dot(ys, 1 / K[i])
+        d = 0
+        for s in range(S):
+            if K[i][s] > 1:
+                d += 1 - ys[s] * (1 / K[i][s])
         alpha = 1 / d
         print("alpha")
         print(alpha)
