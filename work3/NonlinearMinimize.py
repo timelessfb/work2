@@ -306,13 +306,14 @@ def alg_optimize(S, J_num, X_map, load, RHO, I, ys, iter, K):
     o = np.zeros((iter, 5))
     RHO_init = np.copy(RHO)
     for i in range(iter):
+        RHO = RHO_init
         for s in range(S):
             RHO[s] *= K[i][s]
         # RHO = RHO_init * K[i]
         # todo(*计算降级函数上限，待验证1 / K[i])
-        d = 0
+        d = 0.0001
         for s in range(S):
-            if K[i][s] > 1:
+            if ys[s] * (1 / K[i][s]) < 1:
                 d += 1 - ys[s] * (1 / K[i][s])
         alpha = 1 / d
         print("alpha")
@@ -370,7 +371,7 @@ if __name__ == '__main__':
         I[s] = J[s]
 
     # 参数8：仿真图点数
-    iter = 3  # todo(*参数可调)
+    iter = 5  # todo(*参数可调)
 
     # 参数:9：生成切片调整因子K，RHO=K[i]*RHO
     K = generate_K(S, iter)
