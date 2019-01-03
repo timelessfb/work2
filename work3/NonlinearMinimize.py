@@ -179,6 +179,21 @@ def num_of_migration(X_map, I):
     return o
 
 
+def generate_k(S, multiple):
+    k = np.random.uniform(1, 100, S)  # todo(*可调参)
+    sum = np.sum(k)
+    k = multiple * k / sum
+    return k
+
+
+def generate_K(S, iter):
+    K = np.zeros((iter, S))
+    multiples = np.arange(iter) + 1
+    for i in range(iter):
+        K[i] = generate_k(S, multiples[i])
+    return K
+
+
 def opt(X_map, I, ROH, S, J_num, load, alpha, beta):
     # 设置界
     bnd = (0, 1)
@@ -328,6 +343,12 @@ if __name__ == '__main__':
     X_map_o, J, ys, cost_all, cost_d, cost_m = solve(X_map, I, RHO, S, J_num, load)  # 完成第一次映射过程
     for s in range(S):
         I[s] = J[s]
+
+    # 参数8：仿真图点数
+    iter = 10
+
+    # 参数:9：生成切片调整因子K，RHO=K[i]*RHO
+    K = generate_K(S, iter)
 
     print(I)
     print(X_map_o)
