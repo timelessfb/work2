@@ -257,10 +257,6 @@ def solve(X_map, I, RHO, S, J_num, load, alpha, beta):
             X_map[l_x][j] = -1
         X_map[l_x][l_y] = 1
         J[s] = l_y  # 记录映射之后的基站
-        print("确定")
-        print(l_x)
-        print(l_y)
-        print(max_z)
 
     # 确定为所有的基站，求解Js，采用单纯形算法：min c'Y,  s.t. AY<=b, 0<=Y<=b
     A = np.zeros((J_num * 3, S))
@@ -306,6 +302,7 @@ def alg_optimize(S, J_num, X_map, load, RHO, I, ys, iter, K):
     o = np.zeros((iter, 5))
     RHO_init = np.copy(RHO)
     for i in range(iter):
+        print(i)
         RHO = RHO_init
         for s in range(S):
             RHO[s] *= K[i][s]
@@ -316,8 +313,6 @@ def alg_optimize(S, J_num, X_map, load, RHO, I, ys, iter, K):
         #     if ys[s] * (1 / K[i][s]) < 1:
         #         d += 1 - ys[s] * (1 / K[i][s])
         alpha = 1 / S
-        print("alpha")
-        print(alpha)
         # todo(*计算迁移上界，有些只能在一个基站上，多算了，算了S次)
         beta = 1 / S
         X_map_o, J, ys, cost_all, cost_d, cost_m, degradation, num_migration = solve(np.copy(X_map), I, RHO, S, J_num,
@@ -358,7 +353,7 @@ if __name__ == '__main__':
     RHO = slices(S)
 
     # 参数6：权重因子 todo(*参数待调整)
-    alpha = 1 / 3 * S  # 参数待调整
+    alpha = 1 / S  # 参数待调整
     beta = 1 / S  # 参数待调整
 
     # 参数7：初始位置,与初始ys
