@@ -223,6 +223,7 @@ def opt(X_map, I, ROH, S, J_num, load, alpha, beta):
 
 
 def solve(X_map, I, ROH, S, J_num, load, alpha=1, beta=1):
+    J = np.zeros(S, dtype=int)  # 记录映射结果
     for s in range(S):
         z, cost_all, cost_d, cost_m = opt(X_map, I, ROH, S, J_num, load, alpha, beta)
         # todo(*可以优化，比如设置大于一个阈值，就令xij=1)
@@ -240,6 +241,7 @@ def solve(X_map, I, ROH, S, J_num, load, alpha=1, beta=1):
         for j in range(J_num):
             X_map[l_x][j] = -1
         X_map[l_x][l_y] = 1
+        J[s] = l_y  # 记录映射之后的基站
         print("确定")
         print(l_x)
         print(l_y)
@@ -282,7 +284,7 @@ def solve(X_map, I, ROH, S, J_num, load, alpha=1, beta=1):
 
     # 求解两部分代价之和
     cost_all = cost_d + cost_m
-    return X_map, z, cost_all, cost_d, cost_m
+    return X_map, J, ys, cost_all, cost_d, cost_m
 
 
 def alg_optimize(S, J_num, X_map, I):
@@ -309,31 +311,27 @@ if __name__ == '__main__':
     X_map = np.c_[X_map, np.zeros(S)]  # X_map中0就是变量,1代表s映射到j或者ys=1,-1代表不可选基站
     X_map_init = np.copy(X_map)  # 深拷贝一份可选基站集合
 
-    # 参数4：初始位置
-    I = np.zeros(S, dtype=int)
-    I -= 1  # -1表示是第一次映射，非迁移
-    # todo(*还没仔细处理第一次映射，后续可以采用映射部分的算法)
-    # for s in range(S):
-    #     candidate_bs_of_s = np.where(X_map[s][0:J_num] == 0)
-    #     I[s] = candidate_bs_of_s[0][0]
-
-    # 参数5：基站的资源
+    # 参数4：基站的资源
     load = np.zeros((J_num, 3))  # 第一列是每个基站的down资源，第二列up资源，第三列compute资源
-    load += 0.5
+    load += 1
 
-    # 参数6：切片参数，C_req_s_down，C_req_s_up,C_req_s_compute,随机生成
+    # 参数5：切片参数，C_req_s_down，C_req_s_up,C_req_s_compute,随机生成
     RHO = slices(S)
 
-    # todo(*参数待调整)
-    alpha = 1 / 3  # 参数待调整
-    beta = 1  # 参数待调整
-    #################################################################################################################
-    X_map_o, z, cost_all, cost_d, cost_m = solve(X_map, I, RHO, S, J_num, load)
+    # 参数6：权重因子 todo(*参数待调整)
+    alpha = 1 / 3 * S  # 参数待调整
+    beta = 1 / S  # 参数待调整
 
-    selected_bs = np.where(X_map[:][0:J_num] == 1)
-    print(selected_bs)
+    # 参数7：初始位置
+    I = np.zeros(S, dtype=int)
+    I -= 1  # -1表示是第一次映射，无初始的映射基站
+    X_map_o, J, ys, cost_all, cost_d, cost_m = solve(X_map, I, RHO, S, J_num, load)  # 完成第一次映射过程
+    for s in range(S):
+        I[s] = J[s]
 
+    print(I)
     print(X_map_o)
+    print(X_map)
     print(cost_all)
     print(cost_d)
     print(cost_m)
