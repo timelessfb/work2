@@ -182,7 +182,7 @@ def num_of_migration(X_map, I):
 def generate_k(S, multiple):
     k = np.random.uniform(1, 100, S)  # todo(*可调参)
     sum = np.sum(k)
-    k = multiple * k / sum
+    k = multiple * k * S / sum
     return k
 
 
@@ -227,7 +227,7 @@ def opt(X_map, I, RHO, S, J_num, load, alpha, beta):
     for s in range(S):
         if XtoZ(s, I[s], X_map, S, J_num) != -1:
             z0[XtoZ(s, I[s], X_map, S, J_num)] = 1
-    # todo(*做初始资源分配,即ys暂时都定位0)
+    # todo(*做初始资源分配,即ys暂时都定为0)
 
     solution = minimize(objective, z0, method='SLSQP', bounds=bnds, constraints=cons)
     # todo(*查一下这句有没有问题)
@@ -237,7 +237,7 @@ def opt(X_map, I, RHO, S, J_num, load, alpha, beta):
                                                                                        load, alpha, beta)
 
 
-def solve(X_map, I, RHO, S, J_num, load, alpha=1, beta=1):
+def solve(X_map, I, RHO, S, J_num, load, alpha, beta):
     J = np.zeros(S, dtype=int)  # 记录映射结果
     for s in range(S):
         z, cost_all, cost_d, cost_m = opt(X_map, I, RHO, S, J_num, load, alpha, beta)
@@ -288,10 +288,10 @@ def solve(X_map, I, RHO, S, J_num, load, alpha=1, beta=1):
         X_map[s][J_num] = ys[s]
 
     # 根据ys求解降级部分
-    cost_d = 0
+    degradation = 0
     for s in range(S):
-        cost_d += (1 - ys[s])
-    cost_d *= alpha
+        degradation += (1 - ys[s])
+    cost_d = degradation * alpha
 
     # 求解迁移部分
     num_migration = num_of_migration(X_map, I)
@@ -299,19 +299,30 @@ def solve(X_map, I, RHO, S, J_num, load, alpha=1, beta=1):
 
     # 求解两部分代价之和
     cost_all = cost_d + cost_m
-    return X_map, J, ys, cost_all, cost_d, cost_m
+    return X_map, J, ys, cost_all, cost_d, cost_m, degradation, num_migration
 
 
 def alg_optimize(S, J_num, X_map, load, RHO, I, ys, iter, K):
+    o = np.zeros((iter, 5))
+    RHO_init = np.copy(RHO)
     for i in range(iter):
-        RHO = RHO * K[i]
-        # todo(*计算降级函数上限)
+        for s in range(S):
+            RHO[s] *= K[i][s]
+        # RHO = RHO_init * K[i]
+        # todo(*计算降级函数上限，待验证1 / K[i])
         d = S - np.dot(ys, 1 / K[i])
         alpha = 1 / 3 * d
         # todo(*计算迁移上界，有些只能在一个基站上，多算了，算了S次)
         beta = 1 / S
-        solve(np.copy(X_map), I, RHO, S, J_num, load, alpha, beta)
-    return
+        X_map_o, J, ys, cost_all, cost_d, cost_m, degradation, num_migration = solve(np.copy(X_map), I, RHO, S, J_num,
+                                                                                     load, alpha, beta)
+        I = J  # 修改切片映射的基站
+        o[i][0] = cost_d
+        o[i][1] = cost_m
+        o[i][2] = cost_all
+        o[i][3] = degradation
+        o[i][4] = num_migration
+    return o
 
 
 if __name__ == '__main__':
@@ -347,20 +358,17 @@ if __name__ == '__main__':
     # 参数7：初始位置,与初始ys
     I = np.zeros(S, dtype=int)
     I -= 1  # -1表示是第一次映射，无初始的映射基站
-    X_map_o, J, ys, cost_all, cost_d, cost_m = solve(np.copy(X_map), I, RHO, S, J_num,
-                                                     load)  # 完成第一次映射过程 todo(*未传参alpha,beta)
+    X_map_o, J, ys, cost_all, cost_d, cost_m, degradation, num_migration = solve(np.copy(X_map), I, RHO, S, J_num,
+                                                                                 load, alpha,
+                                                                                 beta)  # 完成第一次映射过程 todo(*未传参alpha,beta)
     for s in range(S):
         I[s] = J[s]
 
     # 参数8：仿真图点数
-    iter = 10  # todo(*参数可调)
+    iter = 3  # todo(*参数可调)
 
     # 参数:9：生成切片调整因子K，RHO=K[i]*RHO
     K = generate_K(S, iter)
 
-    print(I)
-    print(X_map_o)
-    print(X_map)
-    print(cost_all)
-    print(cost_d)
-    print(cost_m)
+    o = alg_optimize(S, J_num, X_map, load, RHO, I, ys, iter, K)
+    print(o)
