@@ -311,11 +311,11 @@ def alg_optimize(S, J_num, X_map, load, RHO, I, ys, iter, K):
             RHO[s] *= K[i][s]
         # RHO = RHO_init * K[i]
         # todo(*计算降级函数上限，待验证1 / K[i])
-        d = 0.0001
-        for s in range(S):
-            if ys[s] * (1 / K[i][s]) < 1:
-                d += 1 - ys[s] * (1 / K[i][s])
-        alpha = 1 / d
+        # d = 0.0001
+        # for s in range(S):
+        #     if ys[s] * (1 / K[i][s]) < 1:
+        #         d += 1 - ys[s] * (1 / K[i][s])
+        alpha = 1 / S
         print("alpha")
         print(alpha)
         # todo(*计算迁移上界，有些只能在一个基站上，多算了，算了S次)
