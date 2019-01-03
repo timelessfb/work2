@@ -311,7 +311,9 @@ def alg_optimize(S, J_num, X_map, load, RHO, I, ys, iter, K):
         # RHO = RHO_init * K[i]
         # todo(*计算降级函数上限，待验证1 / K[i])
         d = S - np.dot(ys, 1 / K[i])
-        alpha = 1 / 3 * d
+        alpha = 1 / d
+        print("alpha")
+        print(alpha)
         # todo(*计算迁移上界，有些只能在一个基站上，多算了，算了S次)
         beta = 1 / S
         X_map_o, J, ys, cost_all, cost_d, cost_m, degradation, num_migration = solve(np.copy(X_map), I, RHO, S, J_num,
