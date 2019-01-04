@@ -194,7 +194,7 @@ def generate_K(S, iter):
     return K
 
 
-def opt(X_map, I, RHO, S, J_num, load, alpha, beta):
+def opt(X_map, I, RHO, S, J_num, load, alpha, beta, type):
     # 设置界
     bnd = (0, 1)
     bnds = []
@@ -219,7 +219,7 @@ def opt(X_map, I, RHO, S, J_num, load, alpha, beta):
             {'type': 'eq', 'fun': lambda z, s=s: EqConstraint(z, s, X_map, I, RHO, S, J_num, load)})
 
     # 设置目标
-    objective = lambda z: cost(0, z, X_map, I, RHO, S, J_num, load, alpha, beta)
+    objective = lambda z: cost(type, z, X_map, I, RHO, S, J_num, load, alpha, beta)
 
     # 设置初始值z0
     z0 = np.zeros(ValCount(X_map, S, J_num))
@@ -237,28 +237,8 @@ def opt(X_map, I, RHO, S, J_num, load, alpha, beta):
                                                                                        load, alpha, beta)
 
 
-def solve(X_map, I, RHO, S, J_num, load, alpha, beta):
-    J = np.zeros(S, dtype=int)  # 记录映射结果
-    for s in range(S):
-        z, cost_all, cost_d, cost_m = opt(X_map, I, RHO, S, J_num, load, alpha, beta)
-        # todo(*可以优化，比如设置大于一个阈值，就令xij=1)
-        # 记录最大的xij，并令xij=1
-        max_z = -1
-        max_z_index = -1
-        for i in range(np.size(z)):
-            if z[i] > max_z:
-                l_x, l_y = ZtoX(i, X_map, S, J_num)
-                if l_y != J_num:  # 排除z[i]=ys的情况
-                    max_z = z[i]
-                    max_z_index = i
-        l_x, l_y = ZtoX(max_z_index, X_map, S, J_num)  # l_x切片选定基站l_y
-        # 设置(l_x,l_y)处为1，l_x行其余位置为-1
-        for j in range(J_num):
-            X_map[l_x][j] = -1
-        X_map[l_x][l_y] = 1
-        J[s] = l_y  # 记录映射之后的基站
-
-    # 确定为所有的基站，求解Js，采用单纯形算法：min c'Y,  s.t. AY<=b, 0<=Y<=b
+def Simplex(X_map, RHO, S, J_num, load):
+    # 确定为所有的基站，求解ys，采用单纯形算法：min c'Y,  s.t. AY<=b, 0<=Y<=b
     A = np.zeros((J_num * 3, S))
     b = np.zeros(J_num * 3)
     c = np.zeros(S)
@@ -280,6 +260,31 @@ def solve(X_map, I, RHO, S, J_num, load, alpha, beta):
         bnds.append(bnd)
     solution = linprog(c, A_ub=A, b_ub=b, bounds=bnds)
     ys = solution.x
+    return ys
+
+
+def solve(X_map, I, RHO, S, J_num, load, alpha, beta, type):
+    J = np.zeros(S, dtype=int)  # 记录映射结果
+    for s in range(S):
+        z, cost_all, cost_d, cost_m = opt(X_map, I, RHO, S, J_num, load, alpha, beta, type)
+        # todo(*可以优化，比如设置大于一个阈值，就令xij=1)
+        # 记录最大的xij，并令xij=1
+        max_z = -1
+        max_z_index = -1
+        for i in range(np.size(z)):
+            if z[i] > max_z:
+                l_x, l_y = ZtoX(i, X_map, S, J_num)
+                if l_y != J_num:  # 排除z[i]=ys的情况
+                    max_z = z[i]
+                    max_z_index = i
+        l_x, l_y = ZtoX(max_z_index, X_map, S, J_num)  # l_x切片选定基站l_y
+        # 设置(l_x,l_y)处为1，l_x行其余位置为-1
+        for j in range(J_num):
+            X_map[l_x][j] = -1
+        X_map[l_x][l_y] = 1
+        J[l_x] = l_y  # 记录映射之后的基站
+    # 确定为所有的基站，求解ys，采用单纯形算法：min c'Y,  s.t. AY<=b, 0<=Y<=b
+    ys = Simplex(np.copy(X_map), np.copy(RHO), S, J_num, load)
     for s in range(S):
         X_map[s][J_num] = ys[s]
 
@@ -298,7 +303,37 @@ def solve(X_map, I, RHO, S, J_num, load, alpha, beta):
     return X_map, J, ys, cost_all, cost_d, cost_m, degradation, num_migration
 
 
+# 方法1
 def alg_optimize(S, J_num, X_map, load, RHO, I, ys, iter, K):
+    o = np.zeros((iter, 5))
+    RHO_init = np.copy(RHO)
+    for i in range(iter):
+        print(i)
+        RHO = RHO_init
+        for s in range(S):
+            RHO[s] *= K[i][s]
+        # RHO = RHO_init * K[i]
+        # todo(*计算降级函数上限，待验证1 / K[i])
+        # d = 0.0001
+        # for s in range(S):
+        #     if ys[s] * (1 / K[i][s]) < 1:
+        #         d += 1 - ys[s] * (1 / K[i][s])
+        alpha = 1 / S
+        # todo(*计算迁移上界，有些只能在一个基站上，多算了，算了S次)
+        beta = 1 / (2 * S)
+        X_map_o, J, ys, cost_all, cost_d, cost_m, degradation, num_migration = solve(np.copy(X_map), I, RHO, S, J_num,
+                                                                                     load, alpha, beta, 0)
+        I = J  # 修改切片映射的基站
+        o[i][0] = cost_d
+        o[i][1] = cost_m
+        o[i][2] = cost_all
+        o[i][3] = degradation
+        o[i][4] = num_migration
+    return o
+
+
+# 方法2
+def alg_without_migration_cost(S, J_num, X_map, load, RHO, I, ys, iter, K):
     o = np.zeros((iter, 5))
     RHO_init = np.copy(RHO)
     for i in range(iter):
@@ -316,8 +351,66 @@ def alg_optimize(S, J_num, X_map, load, RHO, I, ys, iter, K):
         # todo(*计算迁移上界，有些只能在一个基站上，多算了，算了S次)
         beta = 1 / S
         X_map_o, J, ys, cost_all, cost_d, cost_m, degradation, num_migration = solve(np.copy(X_map), I, RHO, S, J_num,
-                                                                                     load, alpha, beta)
+                                                                                     load, alpha, beta, 1)
         I = J  # 修改切片映射的基站
+        o[i][0] = cost_d
+        o[i][1] = cost_m
+        o[i][2] = cost_all
+        o[i][3] = degradation
+        o[i][4] = num_migration
+    return o
+
+
+# 方法3
+def static_fix_prov(S, J_num, X_map, load, RHO, I, ys, iter, K):
+    o = np.zeros((iter, 5))
+    for i in range(iter):
+        alpha = 1 / S
+        beta = 1 / S
+        degradation = 0
+        for s in range(S):
+            if ys[s] * (1 / K[i][s]) < 1:
+                degradation += 1 - ys[s] * (1 / K[i][s])
+        cost_d = alpha * degradation
+        num_migration = 0
+        cost_m = beta * num_migration
+        cost_all = cost_d + cost_m
+        o[i][0] = cost_d
+        o[i][1] = cost_m
+        o[i][2] = cost_all
+        o[i][3] = degradation
+        o[i][4] = num_migration
+    return o
+
+
+# 方法4
+def static_opt_prov(S, J_num, X_map, load, RHO, I, ys, iter, K):
+    o = np.zeros((iter, 5))
+    RHO_init = np.copy(RHO)
+    X_map_init = np.zeros_like(X_map)
+    X_map_init -= 1
+    for s in range(S):
+        X_map_init[s][I[s]] = 1
+    for i in range(iter):
+        print(i)
+        RHO = RHO_init
+        for s in range(S):
+            RHO[s] *= K[i][s]
+        alpha = 1 / S
+        beta = 1 / S
+        ys = Simplex(np.copy(X_map_init), np.copy(RHO), S, J_num, load)
+        # 根据ys求解降级部分
+        degradation = 0
+        for s in range(S):
+            degradation += (1 - ys[s])
+        cost_d = degradation * alpha
+
+        # 求解迁移部分
+        num_migration = 0
+        cost_m = beta * num_migration
+
+        # 求解两部分代价之和
+        cost_all = cost_d + cost_m
         o[i][0] = cost_d
         o[i][1] = cost_m
         o[i][2] = cost_all
@@ -347,7 +440,7 @@ if __name__ == '__main__':
 
     # 参数4：基站的资源
     load = np.zeros((J_num, 3))  # 第一列是每个基站的down资源，第二列up资源，第三列compute资源
-    load += 1
+    load += 20
 
     # 参数5：切片参数，C_req_s_down，C_req_s_up,C_req_s_compute,随机生成
     RHO = slices(S)
@@ -361,15 +454,27 @@ if __name__ == '__main__':
     I -= 1  # -1表示是第一次映射，无初始的映射基站
     X_map_o, J, ys, cost_all, cost_d, cost_m, degradation, num_migration = solve(np.copy(X_map), I, RHO, S, J_num,
                                                                                  load, alpha,
-                                                                                 beta)  # 完成第一次映射过程 todo(*未传参alpha,beta)
+                                                                                 beta,
+                                                                                 0)  # 完成第一次映射过程 todo(*未传参alpha,beta)
     for s in range(S):
         I[s] = J[s]
 
     # 参数8：仿真图点数
-    iter = 5  # todo(*参数可调)
+    iter = 3  # todo(*参数可调)
 
     # 参数:9：生成切片调整因子K，RHO=K[i]*RHO
     K = generate_K(S, iter)
+    print(K)
 
-    o = alg_optimize(S, J_num, X_map, load, RHO, I, ys, iter, K)
-    print(o)
+    o1 = alg_optimize(S, J_num, X_map, load, RHO, I, ys, iter, K)
+    o2 = static_fix_prov(S, J_num, X_map, load, RHO, I, ys, iter, K)
+    o3 = static_opt_prov(S, J_num, X_map, load, RHO, I, ys, iter, K)
+    o4 = alg_without_migration_cost(S, J_num, X_map, load, RHO, I, ys, iter, K)
+    print("方法一")
+    print(o1)
+    print("方法二")
+    print(o2)
+    print("方法三")
+    print(o3)
+    print("方法四")
+    print(o4)
