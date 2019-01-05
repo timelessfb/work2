@@ -496,7 +496,7 @@ if __name__ == '__main__':
     J_num = 6
 
     # 参数3：可选基站集合
-    X_map = np.random.binomial(1, 0.5, [S, J_num])
+    X_map = np.random.binomial(1, 0.8, [S, J_num])
     candidate_bs_num = np.sum(X_map, 1)
     slices_of_candidate_bs_num_equalTo_0 = np.where(candidate_bs_num == 0)
     # 一个可选基站都没有的，随机为该切片选择一个

@@ -382,11 +382,11 @@ def alg_optimize(S, J_num, X_map, load, RHO, I, ys, iter, K):
             RHO[s] *= K[i][s]
         # RHO = RHO_init * K[i]
         # todo(*计算降级函数上限，待验证1 / K[i])
-        # d = 0.0001
-        # for s in range(S):
-        #     if ys[s] * (1 / K[i][s]) < 1:
-        #         d += 1 - ys[s] * (1 / K[i][s])
-        alpha = 1 / S
+        d = 0.0001  # 防止d=0的情况
+        for s in range(S):
+            if ys[s] * (1 / K[i][s]) < 1:
+                d += 1 - ys[s] * (1 / K[i][s])
+        alpha = 1 / d
         # todo(*计算迁移上界，有些只能在一个基站上，多算了，算了S次)
         beta = 1 / S
         X_map_o, J, ys, cost_all, cost_d, cost_m, degradation, num_migration = solve(np.copy(X_map), I, RHO, S, J_num,
@@ -411,11 +411,11 @@ def alg_without_migration_cost(S, J_num, X_map, load, RHO, I, ys, iter, K):
             RHO[s] *= K[i][s]
         # RHO = RHO_init * K[i]
         # todo(*计算降级函数上限，待验证1 / K[i])
-        # d = 0.0001
-        # for s in range(S):
-        #     if ys[s] * (1 / K[i][s]) < 1:
-        #         d += 1 - ys[s] * (1 / K[i][s])
-        alpha = 1 / S
+        d = 0.0001
+        for s in range(S):
+            if ys[s] * (1 / K[i][s]) < 1:
+                d += 1 - ys[s] * (1 / K[i][s])
+        alpha = 1 / d
         # todo(*计算迁移上界，有些只能在一个基站上，多算了，算了S次)
         beta = 1 / S
         X_map_o, J, ys, cost_all, cost_d, cost_m, degradation, num_migration = solve1(np.copy(X_map), I, RHO, S, J_num,
@@ -433,7 +433,13 @@ def alg_without_migration_cost(S, J_num, X_map, load, RHO, I, ys, iter, K):
 def static_fix_prov(S, J_num, X_map, load, RHO, I, ys, iter, K):
     o = np.zeros((iter, 5))
     for i in range(iter):
-        alpha = 1 / S
+        # todo(*计算降级函数上限，待验证1 / K[i])
+        d = 0.0001
+        for s in range(S):
+            if ys[s] * (1 / K[i][s]) < 1:
+                d += 1 - ys[s] * (1 / K[i][s])
+        alpha = 1 / d
+        # todo(*计算迁移上界，有些只能在一个基站上，多算了，算了S次)
         beta = 1 / S
         degradation = 0
         for s in range(S):
@@ -464,7 +470,13 @@ def static_opt_prov(S, J_num, X_map, load, RHO, I, ys, iter, K):
         RHO = RHO_init
         for s in range(S):
             RHO[s] *= K[i][s]
-        alpha = 1 / S
+        # todo(*计算降级函数上限，待验证1 / K[i])
+        d = 0.0001
+        for s in range(S):
+            if ys[s] * (1 / K[i][s]) < 1:
+                d += 1 - ys[s] * (1 / K[i][s])
+        alpha = 1 / d
+        # todo(*计算迁移上界，有些只能在一个基站上，多算了，算了S次)
         beta = 1 / S
         ys = Simplex(np.copy(X_map_init), np.copy(RHO), S, J_num, load)
         # 根据ys求解降级部分
@@ -490,10 +502,10 @@ def static_opt_prov(S, J_num, X_map, load, RHO, I, ys, iter, K):
 if __name__ == '__main__':
     ############## 初始参数
     # 参数1:：切片数量
-    S = 18
+    S = 30
 
     # 参数2：基站数目
-    J_num = 6
+    J_num = 10
 
     # 参数3：可选基站集合
     X_map = np.random.binomial(1, 0.5, [S, J_num])
