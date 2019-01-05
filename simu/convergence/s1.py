@@ -328,9 +328,9 @@ def getRbsc(bs_num):
     # r1 = 5
     # r2 = 3
     # r3 = 1
-    r1 = 5
-    r2 = 3
-    r3 = 1
+    r1 = 3.5
+    r2 = 2.5
+    r3 = 1.5
     rbsc[0][0] = r1
     rbsc[0][1] = r2
     rbsc[0][2] = r3
@@ -355,7 +355,7 @@ def getRbsc(bs_num):
     return rbsc
 
 
-def simu(request_num=15, req_num_eachtime=4, sigma=50000, max_iter=1, bs_num=6):
+def simu(request_num=15, req_num_eachtime=4, sigma=500000, max_iter=1, bs_num=6):
     # bs_num = 6
     # BSC：base station capacity
     # RBSC: residuary base station capacity
@@ -382,8 +382,8 @@ def simu(request_num=15, req_num_eachtime=4, sigma=50000, max_iter=1, bs_num=6):
     m = req_num_eachtime * request_num
     sr_total = np.zeros((m, 3), dtype=np.float)
     for i in range(m):
-        s = np.abs(np.random.normal(100, sigma, 3)) + 1
-        s = s / (sum(s))
+        s = np.abs(np.random.normal(1000, sigma, 3))
+        s = 1.5 * s / (sum(s))
         sr_total[i] = s
     for iter in range(request_num):
         # 随机构造每次请求的切片数

@@ -188,7 +188,7 @@ def generate_k(S, multiple):
 
 def generate_K(S, iter):
     K = np.zeros((iter, S))
-    multiples = np.arange(iter) + 1
+    multiples = np.linspace(1, 3, iter)
     for i in range(iter):
         K[i] = generate_k(S, multiples[i])
     return K
@@ -268,7 +268,6 @@ def solve(X_map, I, RHO, S, J_num, load, alpha, beta, type):
     J -= 1
     X_map_init = np.copy(X_map)
     slice_has_select_bs = []
-    print(X_map)
     for s in range(S):
         z, cost_all, cost_d, cost_m = opt(np.copy(X_map), I, RHO, S, J_num, load, alpha, beta, type)
         # todo(*可以优化，比如设置大于一个阈值，就令xij=1)
@@ -292,15 +291,7 @@ def solve(X_map, I, RHO, S, J_num, load, alpha, beta, type):
             if z[XtoZ(s, I[s], X_map, S, J_num)] > max_z_xii:
                 max_z_xii = z[XtoZ(s, I[s], X_map, S, J_num)]
                 max_z_xii_index = XtoZ(s, I[s], X_map, S, J_num)
-                if max_z_xii_index == -1:
-                    print('s')
-        e = 0.2
-        if max_z == 0:
-            print(X_map)
-            print(X_map_init)
-            print(z)
-            print(RHO)
-            opt(X_map, I, RHO, S, J_num, load, alpha, beta, type)
+        e = 0.1
         if max_z - max_z_xii < e:
             print("xii")
             print(max_z)
@@ -427,8 +418,8 @@ def alg_without_migration_cost(S, J_num, X_map, load, RHO, I, ys, iter, K):
         alpha = 1 / S
         # todo(*计算迁移上界，有些只能在一个基站上，多算了，算了S次)
         beta = 1 / S
-        X_map_o, J, ys, cost_all, cost_d, cost_m, degradation, num_migration = solve(np.copy(X_map), I, RHO, S, J_num,
-                                                                                     load, alpha, beta, 1)
+        X_map_o, J, ys, cost_all, cost_d, cost_m, degradation, num_migration = solve1(np.copy(X_map), I, RHO, S, J_num,
+                                                                                      load, alpha, beta, 1)
         I = J  # 修改切片映射的基站
         o[i][0] = cost_d
         o[i][1] = cost_m
@@ -537,7 +528,7 @@ if __name__ == '__main__':
         I[s] = J[s]
 
     # 参数8：仿真图点数
-    iter = 3  # todo(*参数可调)
+    iter = 5  # todo(*参数可调)
 
     # 参数:9：生成切片调整因子K，RHO=K[i]*RHO
     K = generate_K(S, iter)
@@ -547,7 +538,11 @@ if __name__ == '__main__':
     o2 = static_fix_prov(S, J_num, X_map, load, RHO, I, ys, iter, K)
     o3 = static_opt_prov(S, J_num, X_map, load, RHO, I, ys, iter, K)
     o4 = alg_without_migration_cost(S, J_num, X_map, load, RHO, I, ys, iter, K)
+    print("方法1:凸优化")
     print(o1)
+    print("方法2：静态")
     print(o2)
+    print("方法3：半静态")
     print(o3)
+    print("方法4：不带迁移代价")
     print(o4)

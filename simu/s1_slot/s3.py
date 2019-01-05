@@ -355,9 +355,9 @@ def getRbsc(bs_num):
     # r1 = 5
     # r2 = 3
     # r3 = 1
-    r1 = 5
-    r2 = 3
-    r3 = 1
+    r1 = 3.5
+    r2 = 2.5
+    r3 = 1.5
     rbsc[0][0] = r1
     rbsc[0][1] = r2
     rbsc[0][2] = r3
@@ -402,16 +402,16 @@ def simu(request_num=15, req_num_eachtime=4, sigma=50000, max_iter=1, bs_num=6):
     fails = np.zeros((7, request_num))
     # 记录7中算法每次迭代得到下行，上行，计算，总代价
     cost_result = np.zeros((7, request_num, 4), dtype=np.float)
-    resource_used_radio = np.zeros((7, bs_num, 3), dtype=np.float)
+    resource_used = np.zeros((7, bs_num, 3), dtype=np.float)
     time_resouce_used = request_num - 1
     # sigma = 50000
     # 构造m个切片请求
     m = req_num_eachtime * request_num
     sr_total = np.zeros((m, 3), dtype=np.float)
     for i in range(m):
-        s = np.abs(np.random.normal(100, sigma, 3)) + 1
-        s = s / (sum(s))
-        sr_total[i] = s # 切片请求中的三种资源均匀分布在0-1之间，且三种资源之和为1
+        s = np.abs(np.random.normal(1000, sigma, 3))
+        s = 1.5 * s / (sum(s))
+        sr_total[i] = s  # 切片请求中的三种资源均匀分布在0-1之间，且三种资源之和为1
     for iter in range(request_num):
         # 随机构造每次请求的切片数
         m = (iter + 1) * req_num_eachtime
@@ -486,7 +486,7 @@ def simu(request_num=15, req_num_eachtime=4, sigma=50000, max_iter=1, bs_num=6):
             rbsc = update_rbsc(sr, rbsc_init, solution)
             for bs in range(bs_num):
                 for resource_type in range(3):
-                    resource_used_radio[0][bs][resource_type] = rbsc[bs][resource_type] / rbsc_init[bs][resource_type]
+                    resource_used[0][bs][resource_type] = rbsc_init[bs][resource_type] - rbsc[bs][resource_type]
     print("ga总结果")
     print(values)
     # print(rbsc)
@@ -512,7 +512,7 @@ def simu(request_num=15, req_num_eachtime=4, sigma=50000, max_iter=1, bs_num=6):
             rbsc = update_rbsc(sr, rbsc_init, solution)
             for bs in range(bs_num):
                 for resource_type in range(3):
-                    resource_used_radio[1][bs][resource_type] = rbsc[bs][resource_type] / rbsc_init[bs][resource_type]
+                    resource_used[1][bs][resource_type] = rbsc_init[bs][resource_type] - rbsc[bs][resource_type]
     print("greedy_min_cost总结果")
     print(values)
     ##############################################################################################################
@@ -538,7 +538,7 @@ def simu(request_num=15, req_num_eachtime=4, sigma=50000, max_iter=1, bs_num=6):
             rbsc = update_rbsc(sr, rbsc_init, solution)
             for bs in range(bs_num):
                 for resource_type in range(3):
-                    resource_used_radio[2][bs][resource_type] = rbsc[bs][resource_type] / rbsc_init[bs][resource_type]
+                    resource_used[2][bs][resource_type] = rbsc_init[bs][resource_type] - rbsc[bs][resource_type]
     print("greedy_min_bandwidth_cost总结果")
     print(values)
     ##############################################################################################################
@@ -563,7 +563,7 @@ def simu(request_num=15, req_num_eachtime=4, sigma=50000, max_iter=1, bs_num=6):
             rbsc = update_rbsc(sr, rbsc_init, solution)
             for bs in range(bs_num):
                 for resource_type in range(3):
-                    resource_used_radio[3][bs][resource_type] = rbsc[bs][resource_type] / rbsc_init[bs][resource_type]
+                    resource_used[3][bs][resource_type] = rbsc_init[bs][resource_type] - rbsc[bs][resource_type]
     print("greedy_min_up_bandwidth_cost总结果")
     print(values)
     ##############################################################################################################
@@ -588,7 +588,7 @@ def simu(request_num=15, req_num_eachtime=4, sigma=50000, max_iter=1, bs_num=6):
             rbsc = update_rbsc(sr, rbsc_init, solution)
             for bs in range(bs_num):
                 for resource_type in range(3):
-                    resource_used_radio[4][bs][resource_type] = rbsc[bs][resource_type] / rbsc_init[bs][resource_type]
+                    resource_used[4][bs][resource_type] = rbsc_init[bs][resource_type] - rbsc[bs][resource_type]
     print("greedy_min_compute_cost总结果")
     print(values)
     ##############################################################################################################
@@ -612,7 +612,7 @@ def simu(request_num=15, req_num_eachtime=4, sigma=50000, max_iter=1, bs_num=6):
             rbsc = update_rbsc(sr, rbsc_init, solution)
             for bs in range(bs_num):
                 for resource_type in range(3):
-                    resource_used_radio[5][bs][resource_type] = rbsc[bs][resource_type] / rbsc_init[bs][resource_type]
+                    resource_used[5][bs][resource_type] = rbsc_init[bs][resource_type] - rbsc[bs][resource_type]
     print("greedy_min_max_cost总结果")
     print(values)
     ##############################################################################################################
@@ -636,24 +636,24 @@ def simu(request_num=15, req_num_eachtime=4, sigma=50000, max_iter=1, bs_num=6):
             rbsc = update_rbsc(sr, rbsc_init, solution)
             for bs in range(bs_num):
                 for resource_type in range(3):
-                    resource_used_radio[6][bs][resource_type] = rbsc[bs][resource_type] / rbsc_init[bs][resource_type]
+                    resource_used[6][bs][resource_type] = rbsc_init[bs][resource_type] - rbsc[bs][resource_type]
     print("random总结果")
     print(values)
     ##############################################################################################################
     print(fails)
-    return cost_result, fails, resource_used_radio
+    return cost_result, fails, resource_used
 
 
 # 时间估算：1小时只能跑1200
 if __name__ == '__main__':
-    request_num = 12
-    req_num_eachtime = 6
-    sigma = 5000
+    request_num = 10
+    req_num_eachtime = 3
+    sigma = 500000
     ###############
     # 遗传算法迭代次数
-    max_iter = 200
+    max_iter = 1
     # 多次取平均
-    n = 100
+    n = 10
     tz = pytz.timezone('Asia/Shanghai')  # 东八区
     print(max_iter)
     print(n)
@@ -661,7 +661,7 @@ if __name__ == '__main__':
     bs_num = 6
     cost_result = np.zeros((7, request_num, 4), dtype=np.float)
     fails = np.zeros((7, request_num))
-    resource_used_radio = np.zeros((7, bs_num, 3), dtype=np.float)
+    resource_used = np.zeros((7, bs_num, 3), dtype=np.float)
     resource_radio = np.zeros((7, 3), dtype=np.float)
     for i in range(n):
         print('iter:')
@@ -669,19 +669,19 @@ if __name__ == '__main__':
         t = datetime.datetime.fromtimestamp(int(time.time()), pytz.timezone('Asia/Shanghai')).strftime(
             '%Y-%m-%d %H:%M:%S')
         print(t)
-        cost_result_, fails_, resource_used_radio_ = simu(request_num, req_num_eachtime, sigma, max_iter, bs_num)
+        cost_result_, fails_, resource_used_ = simu(request_num, req_num_eachtime, sigma, max_iter, bs_num)
         cost_result += cost_result_
         fails += fails_
-        resource_used_radio += resource_used_radio_
+        resource_used += resource_used_
     cost_result /= n
     fails /= n
-    resource_used_radio /= n
+    resource_used /= n
     nowtime = (lambda: int(round(time.time() * 1000)))
     nowtime = nowtime()
-    pt.plot_fun_slot(cost_result[:, :, 0], fails, req_num_eachtime, '切片请求数量（个）', '平均下行带宽映射代价',
-                     str(nowtime) + '下行带宽映射代价')
-    pt.plot_fun_slot(cost_result[:, :, 1], fails, req_num_eachtime, '切片请求数量（个）', '平均上行带宽映射代价',
-                     str(nowtime) + '上行带宽映射代价')
+    # pt.plot_fun_slot(cost_result[:, :, 0], fails, req_num_eachtime, '切片请求数量（个）', '平均下行带宽映射代价',
+    #                  str(nowtime) + '下行带宽映射代价')
+    # pt.plot_fun_slot(cost_result[:, :, 1], fails, req_num_eachtime, '切片请求数量（个）', '平均上行带宽映射代价',
+    #                  str(nowtime) + '上行带宽映射代价')
     pt.plot_fun_slot(cost_result[:, :, 2], fails, req_num_eachtime, '切片请求数量（个）', 1,
                      str(nowtime) + '计算资源映射代价')
     pt.plot_fun_slot((cost_result[:, :, 0] + cost_result[:, :, 1]), fails, req_num_eachtime, '切片请求数量（个）',
@@ -695,9 +695,13 @@ if __name__ == '__main__':
     r1 = rbsc[0][0]
     r2 = rbsc[0][1]
     r3 = rbsc[0][2]
+    print("resource_used[1]")
+    print(resource_used[1])
     for algorithm in range(7):
-        resource_radio[algorithm, :] = 1 - (np.sum(resource_used_radio[algorithm, :, :], 0) / ((r1 + r2 + r3) * 6))
+        resource_radio[algorithm, :] = np.sum(resource_used[algorithm, :, :], 0) / ((r1 + r2 + r3) * bs_num / 3)
     plot_bar.plat_bar(resource_radio, str(nowtime) + '资源使用率')
+    print("resource_radio")
+    print(resource_radio)
     print("结果")
     print("cost_result")
     print(cost_result)
