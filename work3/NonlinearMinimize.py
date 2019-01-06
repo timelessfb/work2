@@ -502,14 +502,14 @@ def static_opt_prov(S, J_num, X_map, load, RHO, I, ys, iter, K):
 
 if __name__ == '__main__':
     ############## 初始参数
-    # 参数1:：切片数量
+    # 参数1:切片数量
     S = 30
 
     # 参数2：基站数目
-    J_num = 10
+    J_num = 6
 
     # 参数3：可选基站集合
-    X_map = np.random.binomial(1, 0.5, [S, J_num])
+    X_map = np.random.binomial(1, 0.8, [S, J_num])
     candidate_bs_num = np.sum(X_map, 1)
     slices_of_candidate_bs_num_equalTo_0 = np.where(candidate_bs_num == 0)
     # 一个可选基站都没有的，随机为该切片选择一个
