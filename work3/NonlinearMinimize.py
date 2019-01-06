@@ -180,7 +180,7 @@ def num_of_migration(X_map, I):
 
 
 def generate_k(S, multiple):
-    k = np.random.uniform(1, 100, S)  # todo(*可调参)
+    k = np.random.uniform(1, 1000, S)  # todo(*可调参)
     sum = np.sum(k)
     k = multiple * k * S / sum
     return k
@@ -503,10 +503,10 @@ def static_opt_prov(S, J_num, X_map, load, RHO, I, ys, iter, K):
 if __name__ == '__main__':
     ############## 初始参数
     # 参数1:切片数量
-    S = 30
+    S = 20
 
     # 参数2：基站数目
-    J_num = 6
+    J_num = 8
 
     # 参数3：可选基站集合
     X_map = np.random.binomial(1, 0.8, [S, J_num])
