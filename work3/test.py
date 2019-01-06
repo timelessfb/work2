@@ -547,9 +547,13 @@ if __name__ == '__main__':
     K = generate_K(S, iter)
     print(K)
 
+    print("方法1:凸优化")
     o1 = alg_optimize(S, J_num, X_map, load, RHO, I, ys, iter, K)
+    print("方法2：静态")
     o2 = static_fix_prov(S, J_num, X_map, load, RHO, I, ys, iter, K)
+    print("方法3：半静态")
     o3 = static_opt_prov(S, J_num, X_map, load, RHO, I, ys, iter, K)
+    print("方法4：不带迁移代价")
     o4 = alg_without_migration_cost(S, J_num, X_map, load, RHO, I, ys, iter, K)
     print("方法1:凸优化")
     print(o1)
