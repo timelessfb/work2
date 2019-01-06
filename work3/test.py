@@ -269,47 +269,44 @@ def solve(X_map, I, RHO, S, J_num, load, alpha, beta, type):
     X_map_init = np.copy(X_map)
     slice_has_select_bs = []
     for s in range(S):
-        z, cost_all, cost_d, cost_m = opt(np.copy(X_map), I, RHO, S, J_num, load, alpha, beta, type)
+        X_map_this_loop = np.copy(X_map)
+        z, cost_all, cost_d, cost_m = opt(np.copy(X_map_this_loop), I, RHO, S, J_num, load, alpha, beta, type)
         # todo(*可以优化，比如设置大于一个阈值，就令xij=1)
         # 记录最大的xij，并令xij=1
-        max_z = -1
-        max_z_index = -1
-        for i in range(np.size(z)):
-            if z[i] > max_z:
-                l_x, l_y = ZtoX(i, X_map, S, J_num)
-                if l_y != J_num:  # 排除z[i]=ys的情况
-                    max_z = z[i]
-                    max_z_index = i
-        # l_x, l_y = ZtoX(max_z_index, X_map, S, J_num)  # l_x切片选定基站l_y
-
-        # 找出最大的xii
-        max_z_xii = -1
-        max_z_xii_index = -1
+        zz = z
         for s in range(S):
-            if s in slice_has_select_bs:
-                continue
-            if z[XtoZ(s, I[s], X_map, S, J_num)] > max_z_xii:
-                max_z_xii = z[XtoZ(s, I[s], X_map, S, J_num)]
-                max_z_xii_index = XtoZ(s, I[s], X_map, S, J_num)
-        e = 0.1
-        if max_z - max_z_xii < e:
-            print("xii")
-            print(max_z)
-            print(max_z_xii)
-            l_x, l_y = ZtoX(max_z_xii_index, X_map, S, J_num)  # l_x切片选定基站l_y
-            slice_has_select_bs.append(l_x)
-        else:
-            print("mig")
-            print(max_z)
-            print(max_z_xii)
-            l_x, l_y = ZtoX(max_z_index, X_map, S, J_num)  # l_x切片选定基站l_y
-            slice_has_select_bs.append(l_x)
+            zz[XtoZ(s, J_num, X_map, S, J_num)] = 0  # 将得到结果的ys置为0
+        max_z = np.max(zz)
+        max_z_index = np.where(zz == max_z)  # 可能存在多个同时最大的
+        max_z_index = max_z_index[0]
+        max_z_xii_index = []
+        for z_index in max_z_index:
+            l_x, l_y = ZtoX(z_index, np.copy(X_map_this_loop), S, J_num)
+            if l_y == I[l_x]:
+                max_z_xii_index.append(z_index)
+        if len(max_z_xii_index) > 0:
+            for z_index in max_z_xii_index:
+                l_x, l_y = ZtoX(z_index, np.copy(X_map_this_loop), S, J_num)
+                for j in range(J_num):
+                    X_map[l_x][j] = -1
+                X_map[l_x][l_y] = 1
+                J[l_x] = l_y
+        else:  # 最大的xij不是xii,则挑选出来最大的xij（多个，比如x01,x02都等于1，最大）对应的yj集合中的最大一个，设置为1
+            max_ys = -1
+            max_ys_index = -1
+            for z_index in max_z_index:
+                l_x, l_y = ZtoX(z_index, X_map, S, J_num)
+                if z[XtoZ(s, J_num, X_map, S, J_num)] > max_ys:
+                    max_ys = z[XtoZ(s, J_num, X_map, S, J_num)]
+                    max_ys_index = z_index
+            l_x, l_y = ZtoX(max_ys_index, X_map, S, J_num)
+            for j in range(J_num):
+                X_map[l_x][j] = -1
+            X_map[l_x][l_y] = 1
+            J[l_x] = l_y
+        if ValCount(X_map, S, J_num) == S:
+            break
 
-        # 设置(l_x,l_y)处为1，l_x行其余位置为-1
-        for j in range(J_num):
-            X_map[l_x][j] = -1
-        X_map[l_x][l_y] = 1
-        J[l_x] = l_y  # 记录映射之后的基站
     # 确定为所有的基站，求解ys，采用单纯形算法：min c'Y,  s.t. AY<=b, 0<=Y<=b
     ys = Simplex(np.copy(X_map), np.copy(RHO), S, J_num, load)
     for s in range(S):
@@ -334,23 +331,26 @@ def solve1(X_map, I, RHO, S, J_num, load, alpha, beta, type):
     J = np.zeros(S, dtype=int)  # 记录映射结果
     J -= 1
     for s in range(S):
-        z, cost_all, cost_d, cost_m = opt(X_map, I, RHO, S, J_num, load, alpha, beta, type)
+        X_map_this_loop = np.copy(X_map)
+        z, cost_all, cost_d, cost_m = opt(np.copy(X_map_this_loop), I, RHO, S, J_num, load, alpha, beta, type)
         # todo(*可以优化，比如设置大于一个阈值，就令xij=1)
         # 记录最大的xij，并令xij=1
-        max_z = -1
-        max_z_index = -1
-        for i in range(np.size(z)):
-            if z[i] > max_z:
-                l_x, l_y = ZtoX(i, X_map, S, J_num)
-                if l_y != J_num:  # 排除z[i]=ys的情况
-                    max_z = z[i]
-                    max_z_index = i
-        l_x, l_y = ZtoX(max_z_index, X_map, S, J_num)  # l_x切片选定基站l_y
-        # 设置(l_x,l_y)处为1，l_x行其余位置为-1
-        for j in range(J_num):
-            X_map[l_x][j] = -1
-        X_map[l_x][l_y] = 1
-        J[l_x] = l_y  # 记录映射之后的基站
+        # 记录最大的xij，并令xij=1
+        zz = z
+        for s in range(S):
+            zz[XtoZ(s, J_num, X_map, S, J_num)] = 0  # 将得到结果的ys置为0
+        max_z = np.max(zz)
+        max_z_index = np.where(zz == max_z)  # 可能存在多个同时最大的
+        max_z_index = max_z_index[0]
+        for z_index in max_z_index:
+            l_x, l_y = ZtoX(z_index, np.copy(X_map_this_loop), S, J_num)
+            for j in range(J_num):
+                X_map[l_x][j] = -1
+            X_map[l_x][l_y] = 1
+            J[l_x] = l_y
+        if ValCount(X_map, S, J_num) == S:
+            break
+
     # 确定为所有的基站，求解ys，采用单纯形算法：min c'Y,  s.t. AY<=b, 0<=Y<=b
     ys = Simplex(np.copy(X_map), np.copy(RHO), S, J_num, load)
     for s in range(S):
@@ -433,6 +433,7 @@ def alg_without_migration_cost(S, J_num, X_map, load, RHO, I, ys, iter, K):
 def static_fix_prov(S, J_num, X_map, load, RHO, I, ys, iter, K):
     o = np.zeros((iter, 5))
     for i in range(iter):
+        print(i)
         # todo(*计算降级函数上限，待验证1 / K[i])
         d = 0.0001
         for s in range(S):
@@ -540,7 +541,7 @@ if __name__ == '__main__':
         I[s] = J[s]
 
     # 参数8：仿真图点数
-    iter = 5  # todo(*参数可调)
+    iter = 3  # todo(*参数可调)
 
     # 参数:9：生成切片调整因子K，RHO=K[i]*RHO
     K = generate_K(S, iter)
