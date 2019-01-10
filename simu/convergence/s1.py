@@ -649,6 +649,7 @@ if __name__ == '__main__':
                 sr[k] = s
             rbsc = getRbsc(bs_num)
             o = ga(sr, rbsc, max_iter, delta, pc, pm, populationSize)
+            print(o)
             optimalValues[j] += np.array(o)
     optimalValues /= n
 
