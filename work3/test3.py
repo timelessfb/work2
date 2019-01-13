@@ -75,14 +75,6 @@ def ValCount(X_map, S, J_num):
     return o
 
 
-def UnSelectBS(X_map, S, J_num):
-    o = []
-    for s in range(S):
-        if np.max(X_map[s][0:J_num]) == 1:  # todo(*风险点)
-            o.append(s)
-    return o
-
-
 def ResourceConstraint(resorce_type, z, j, X_map, I, ROH, S, J_num, load):
     # X_map中第j列为0的位置对应z中的index
     x_indexs = []
@@ -141,12 +133,11 @@ def EqConstraint(z, s, X_map, I, ROH, S, J_num, load):
     return o
 
 
-def cost(type, z, X_map, I, ROH, S, J_num, load, alpha, beta, migration_degradation):
+def cost(type, z, X_map, I, RHO, S, J_num, load, migration_degradation):
     # o1是资源不足导致的服务降级
     o1 = 0
     for s in range(S):
         o1 += (1 - z[XtoZ(s, J_num, X_map, S, J_num)])
-    o1 *= alpha
 
     # o2表示迁移导致的服务降级
     o2 = 0
@@ -158,8 +149,6 @@ def cost(type, z, X_map, I, ROH, S, J_num, load, alpha, beta, migration_degradat
             if X_map[s][j] != -1:  # 找到s切片映射的基站j，注意X_map[s][j]对应的xij可能为小数，表示部分映射
                 if j != i:  # 找到发生迁移的部分切片（因为xij可能为小数）
                     o2 += migration_degradation[s] * z[XtoZ(s, j, X_map, S, J_num)]
-    o2 *= beta
-
     if type == 0:
         return o1 + o2
     if type == 1:
@@ -168,62 +157,44 @@ def cost(type, z, X_map, I, ROH, S, J_num, load, alpha, beta, migration_degradat
         return o2
 
 
-def gradient(z, X_map, S, J_num, alpha, beta, migration_degradation):
+def gradient(z, X_map, S, J_num, migration_degradation):
     """ Derivative of objective function """
     jac = np.zeros_like(z)
     for i in range(np.size(z)):
         l_x, l_y = ZtoX(i, X_map, S, J_num)
         if l_y == J_num:  # 说明是ys
-            jac[i] = -1 * alpha
+            jac[i] = -1
         else:
             if l_y == I[l_x]:
                 jac[i] = 0
             else:
-                jac[i] = beta * 1 * migration_degradation[l_x]
+                jac[i] = migration_degradation[l_x]
     return jac
 
 
-# def gradient(z):
-#     """ Derivative of objective function """
-#
-#     jac = np.zeros_like(z)
-#     for i in range(np.size(z)):
-#         l_x, l_y = ZtoX(i, X_map, S, J_num)
-#         if l_y == J_num:  # 说明是ys
-#             jac[i] = -1 * alpha
-#         else:
-#             if l_y == I[l_x]:
-#                 jac[i] = 0
-#             else:
-#                 jac[i] = beta * 1
-#     return jac
+def compute_cost_m(X_map, I, migration_degradation):
+    o = 0
+    for s in range(S):
+        i = I[s]
+        if i == -1:  # 说明该切片是第一次映射，不存在迁移成本
+            continue
+        for j in range(J_num):
+            if X_map[s][j] == 1:  # 找到s切片映射的基站j，注意X_map[s][j]对应的xij可能为小数，表示部分映射
+                if j != i:  # 找到发生迁移的部分切片（因为xij可能为小数）
+                    o += migration_degradation[s]
+    return o
 
 
-def gradient1(z, X_map, S, J_num, alpha, beta):
+def gradient1(z, X_map, S, J_num):
     """ Derivative of objective function """
     jac = np.zeros_like(z)
     for i in range(np.size(z)):
         l_x, l_y = ZtoX(i, X_map, S, J_num)
         if l_y == J_num:  # 说明是ys
-            jac[i] = -1 * alpha
+            jac[i] = -1
         else:
             jac[i] = 0
     return jac
-
-
-# def func_deriv(z):
-#     """ Derivative of objective function """
-#     jac = np.zeros_like(z)
-#     for i in range(np.size(z)):
-#         l_x, l_y = ZtoX(i, X_map, S, J_num)
-#         if l_y == J_num:  # 说明是ys
-#             jac[i] = -1 * alpha
-#         else:
-#             if l_y == I[l_x]:
-#                 jac[i] = 0
-#             else:
-#                 jac[i] = beta * 1
-#     return jac
 
 
 def num_of_migration(X_map, I):
@@ -240,7 +211,7 @@ def num_of_migration(X_map, I):
 
 
 def generate_k(S, multiple):
-    k = np.random.uniform(1, 1000, S)  # todo(*可调参)
+    k = np.random.uniform(1, 1000, S)
     sum = np.sum(k)
     k = multiple * k * S / sum
     return k
@@ -254,7 +225,7 @@ def generate_K(S, iter):
     return K
 
 
-def opt(X_map, I, RHO, S, J_num, load, alpha, beta, type, migration_degradation):
+def opt(X_map, I, RHO, S, J_num, load, type, migration_degradation):
     # 设置界
     bnd = (0, 1)
     bnds = []
@@ -279,7 +250,7 @@ def opt(X_map, I, RHO, S, J_num, load, alpha, beta, type, migration_degradation)
             {'type': 'eq', 'fun': lambda z, s=s: EqConstraint(z, s, X_map, I, RHO, S, J_num, load)})
 
     # 设置目标
-    objective = lambda z: cost(type, z, X_map, I, RHO, S, J_num, load, alpha, beta, migration_degradation)
+    objective = lambda z: cost(type, z, X_map, I, RHO, S, J_num, load, migration_degradation)
 
     # 设置初始值z0
     z0 = np.zeros(ValCount(X_map, S, J_num))
@@ -297,21 +268,14 @@ def opt(X_map, I, RHO, S, J_num, load, alpha, beta, type, migration_degradation)
         z0[XtoZ(s, J_num, X_map, S, J_num)] = ys[s]
 
     solution = minimize(objective, z0, method='SLSQP', bounds=bnds, constraints=cons,
-                        jac=lambda z: gradient(z, X_map, S, J_num, alpha, beta, migration_degradation))
+                        jac=lambda z: gradient(z, X_map, S, J_num, migration_degradation))
     z = solution.x
-    return z, cost(0, z, X_map, I, RHO, S, J_num, load, alpha, beta, migration_degradation), cost(1, z, X_map, I, RHO,
-                                                                                                  S, J_num, load, alpha,
-                                                                                                  beta,
-                                                                                                  migration_degradation), cost(
-        2, z, X_map, I, RHO, S, J_num,
-        load, alpha, beta, migration_degradation)
+    return z, cost(0, z, X_map, I, RHO, S, J_num, load, migration_degradation), cost(1, z, X_map, I, RHO, S, J_num,
+                                                                                     load, migration_degradation), cost(
+        2, z, X_map, I, RHO, S, J_num, load, migration_degradation)
 
 
-def test(z):
-    return np.zeros_like(z)
-
-
-def opt1(X_map, I, RHO, S, J_num, load, alpha, beta, type, migration_degradation):
+def opt1(X_map, I, RHO, S, J_num, load, type, migration_degradation):
     # 设置界
     bnd = (0, 1)
     bnds = []
@@ -336,7 +300,7 @@ def opt1(X_map, I, RHO, S, J_num, load, alpha, beta, type, migration_degradation
             {'type': 'eq', 'fun': lambda z, s=s: EqConstraint(z, s, X_map, I, RHO, S, J_num, load)})
 
     # 设置目标
-    objective = lambda z: cost(type, z, X_map, I, RHO, S, J_num, load, alpha, beta, migration_degradation)
+    objective = lambda z: cost(type, z, X_map, I, RHO, S, J_num, load, migration_degradation)
 
     # 设置初始值z0
     z0 = np.zeros(ValCount(X_map, S, J_num))
@@ -354,14 +318,11 @@ def opt1(X_map, I, RHO, S, J_num, load, alpha, beta, type, migration_degradation
         z0[XtoZ(s, J_num, X_map, S, J_num)] = ys[s]
 
     solution = minimize(objective, z0, method='SLSQP', bounds=bnds, constraints=cons,
-                        jac=lambda z: gradient1(z, X_map, S, J_num, alpha, beta))
+                        jac=lambda z: gradient1(z, X_map, S, J_num))
     z = solution.x
-    return z, cost(0, z, X_map, I, RHO, S, J_num, load, alpha, beta, migration_degradation), cost(1, z, X_map, I, RHO,
-                                                                                                  S, J_num, load, alpha,
-                                                                                                  beta,
-                                                                                                  migration_degradation), cost(
-        2, z, X_map, I, RHO, S, J_num,
-        load, alpha, beta, migration_degradation)
+    return z, cost(0, z, X_map, I, RHO, S, J_num, load, migration_degradation), cost(1, z, X_map, I, RHO, S, J_num,
+                                                                                     load, migration_degradation), cost(
+        2, z, X_map, I, RHO, S, J_num, load, migration_degradation)
 
 
 def Simplex(X_map, RHO, S, J_num, load):
@@ -390,14 +351,14 @@ def Simplex(X_map, RHO, S, J_num, load):
     return ys
 
 
-def solve(X_map, I, RHO, S, J_num, load, alpha, beta, type, migration_degradation):
+def solve(X_map, I, RHO, S, J_num, load, type, migration_degradation):
     J = np.zeros(S, dtype=int)  # 记录映射结果
     J -= 1
     X_map_init = np.copy(X_map)
     slice_has_select_bs = []
     for s in range(S):
         X_map_this_loop = np.copy(X_map)
-        z, cost_all, cost_d, cost_m = opt(np.copy(X_map_this_loop), I, RHO, S, J_num, load, alpha, beta, type,
+        z, cost_all, cost_d, cost_m = opt(np.copy(X_map_this_loop), I, RHO, S, J_num, load, type,
                                           migration_degradation)
         # todo(*可以优化，比如设置大于一个阈值，就令xij=1)
         # 记录最大的xij，并令xij=1
@@ -444,23 +405,23 @@ def solve(X_map, I, RHO, S, J_num, load, alpha, beta, type, migration_degradatio
     degradation = 0
     for s in range(S):
         degradation += (1 - ys[s])
-    cost_d = degradation * alpha
+    cost_d = degradation
 
     # 求解迁移部分
     num_migration = num_of_migration(X_map, I)
-    cost_m = beta * num_migration
+    cost_m = compute_cost_m(X_map, I, migration_degradation)
 
     # 求解两部分代价之和
     cost_all = cost_d + cost_m
     return X_map, J, ys, cost_all, cost_d, cost_m, degradation, num_migration
 
 
-def solve1(X_map, I, RHO, S, J_num, load, alpha, beta, type, migration_degradation):
+def solve1(X_map, I, RHO, S, J_num, load, type, migration_degradation):
     J = np.zeros(S, dtype=int)  # 记录映射结果
     J -= 1
     for s in range(S):
         X_map_this_loop = np.copy(X_map)
-        z, cost_all, cost_d, cost_m = opt1(np.copy(X_map_this_loop), I, RHO, S, J_num, load, alpha, beta, type,
+        z, cost_all, cost_d, cost_m = opt1(np.copy(X_map_this_loop), I, RHO, S, J_num, load, type,
                                            migration_degradation)
         # todo(*可以优化，比如设置大于一个阈值，就令xij=1)
         # 记录最大的xij，并令xij=1
@@ -489,11 +450,11 @@ def solve1(X_map, I, RHO, S, J_num, load, alpha, beta, type, migration_degradati
     degradation = 0
     for s in range(S):
         degradation += (1 - ys[s])
-    cost_d = degradation * alpha
+    cost_d = degradation
 
     # 求解迁移部分
     num_migration = num_of_migration(X_map, I)
-    cost_m = beta * num_migration
+    cost_m = compute_cost_m(X_map, I, migration_degradation)
 
     # 求解两部分代价之和
     cost_all = cost_d + cost_m
@@ -509,18 +470,10 @@ def alg_optimize(S, J_num, X_map, load, RHO, I, ys, iter, K, mu, migration_degra
         RHO = RHO_init
         for s in range(S):
             RHO[s] *= K[i][s]
-        # todo(*计算降级函数上限，待验证1 / K[i])
-        d = 0.0001  # 防止d=0的情况
-        for s in range(S):
-            if ys[s] * (1 / K[i][s]) < 1:
-                d += 1 - ys[s] * (1 / K[i][s])
-        alpha = mu / S
-        # todo(*计算迁移上界，有些只能在一个基站上，多算了，算了S次)
-        beta = (1 - mu) / S
         X_map_o, J, ys, cost_all, cost_d, cost_m, degradation, num_migration = solve(np.copy(X_map), I, RHO, S, J_num,
-                                                                                     load, alpha, beta, 0,
+                                                                                     load, 0,
                                                                                      migration_degradation)
-        I = J  # 修改切片映射的基站
+        # I = J  # 修改切片映射的基站
         o[i][0] = cost_d
         o[i][1] = cost_m
         o[i][2] = cost_all
@@ -538,19 +491,10 @@ def alg_without_migration_cost(S, J_num, X_map, load, RHO, I, ys, iter, K, mu):
         RHO = RHO_init
         for s in range(S):
             RHO[s] *= K[i][s]
-        # RHO = RHO_init * K[i]
-        # todo(*计算降级函数上限，待验证1 / K[i])
-        d = 0.0001
-        for s in range(S):
-            if ys[s] * (1 / K[i][s]) < 1:
-                d += 1 - ys[s] * (1 / K[i][s])
-        alpha = mu / S
-        # todo(*计算迁移上界，有些只能在一个基站上，多算了，算了S次)
-        beta = (1 - mu) / S
         X_map_o, J, ys, cost_all, cost_d, cost_m, degradation, num_migration = solve1(np.copy(X_map), I, RHO, S, J_num,
-                                                                                      load, alpha, beta, 1,
+                                                                                      load, 1,
                                                                                       migration_degradation)
-        I = J  # 修改切片映射的基站
+        # I = J  # 修改切片映射的基站
         o[i][0] = cost_d
         o[i][1] = cost_m
         o[i][2] = cost_all
@@ -563,22 +507,13 @@ def alg_without_migration_cost(S, J_num, X_map, load, RHO, I, ys, iter, K, mu):
 def static_fix_prov(S, J_num, X_map, load, RHO, I, ys, iter, K, mu):
     o = np.zeros((iter, 5))
     for i in range(iter):
-        print(i)
-        # todo(*计算降级函数上限，待验证1 / K[i])
-        d = 0.0001
-        for s in range(S):
-            if ys[s] * (1 / K[i][s]) < 1:
-                d += 1 - ys[s] * (1 / K[i][s])
-        alpha = mu / S
-        # todo(*计算迁移上界，有些只能在一个基站上，多算了，算了S次)
-        beta = (1 - mu) / S
         degradation = 0
         for s in range(S):
             if ys[s] * (1 / K[i][s]) < 1:
                 degradation += 1 - ys[s] * (1 / K[i][s])
-        cost_d = alpha * degradation
+        cost_d = degradation
         num_migration = 0
-        cost_m = beta * num_migration
+        cost_m = num_migration
         cost_all = cost_d + cost_m
         o[i][0] = cost_d
         o[i][1] = cost_m
@@ -601,24 +536,16 @@ def static_opt_prov(S, J_num, X_map, load, RHO, I, ys, iter, K, mu):
         RHO = RHO_init
         for s in range(S):
             RHO[s] *= K[i][s]
-        # todo(*计算降级函数上限，待验证1 / K[i])
-        d = 0.0001
-        for s in range(S):
-            if ys[s] * (1 / K[i][s]) < 1:
-                d += 1 - ys[s] * (1 / K[i][s])
-        alpha = mu / S
-        # todo(*计算迁移上界，有些只能在一个基站上，多算了，算了S次)
-        beta = (1 - mu) / S
         ys = Simplex(np.copy(X_map_init), np.copy(RHO), S, J_num, load)
         # 根据ys求解降级部分
         degradation = 0
         for s in range(S):
             degradation += (1 - ys[s])
-        cost_d = degradation * alpha
+        cost_d = degradation
 
         # 求解迁移部分
         num_migration = 0
-        cost_m = beta * num_migration
+        cost_m = num_migration
 
         # 求解两部分代价之和
         cost_all = cost_d + cost_m
@@ -660,20 +587,15 @@ if __name__ == '__main__':
     # 参数5：切片参数，C_req_s_down,C_req_s_up,C_req_s_compute,随机生成
     RHO = slices(S)
 
-    # 参数6：权重因子 todo(*参数待调整)
-    alpha = 1 / S  # 参数待调整
-    beta = 1 / S  # 参数待调整
-
-    # 参数7：生成迁移降级系数
+    # 参数6：生成迁移降级系数
     migration_degradation = np.random.uniform(0, 0.1, S)
 
     # 参数8：初始位置,与初始ys
     I = np.zeros(S, dtype=int)
     I -= 1  # -1表示是第一次映射，无初始的映射基站
     X_map_o, J, ys, cost_all, cost_d, cost_m, degradation, num_migration = solve1(np.copy(X_map), I, RHO, S, J_num,
-                                                                                  load, alpha,
-                                                                                  beta,
-                                                                                  0, migration_degradation)  # 完成第一次映射过程
+                                                                                  load, 0,
+                                                                                  migration_degradation)  # 完成第一次映射过程
     for s in range(S):
         I[s] = J[s]
 

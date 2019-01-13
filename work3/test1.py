@@ -132,6 +132,41 @@ def ResourceConstraint(resorce_type, z, j, X_map, I, ROH, S, J_num, load):
     return o
 
 
+def gradient_Constraint(resorce_type, z, j, X_map, I, ROH, S, J_num, load):
+    jac = np.zeros_like(z)
+    if resorce_type == 'down':
+        for i in range(np.size(z)):
+            l_x, l_y = ZtoX(i, X_map, S, J_num)
+            if l_y == J_num:  # 说明是ys
+                # 找到对应求所有的xij(s)之和
+                for j in range(J_num):
+                    if XtoZ(l_x, j, X_map, S, J_num) != -1:
+                        jac[i] += z[XtoZ(l_x, j, X_map, S, J_num)] * RHO[l_x][0]
+            else:  # 变量是xij
+                jac[i] = z[XtoZ(l_x, J_num, X_map, S, J_num)] * RHO[l_x][0]
+    if resorce_type == 'up':
+        for i in range(np.size(z)):
+            l_x, l_y = ZtoX(i, X_map, S, J_num)
+            if l_y == J_num:  # 说明是ys
+                # 找到对应求所有的xij(s)之和
+                for j in range(J_num):
+                    if XtoZ(l_x, j, X_map, S, J_num) != -1:
+                        jac[i] += z[XtoZ(l_x, j, X_map, S, J_num)] * RHO[l_x][1]
+            else:  # 变量是xij
+                jac[i] = z[XtoZ(l_x, J_num, X_map, S, J_num)] * RHO[l_x][1]
+    if resorce_type == 'compute':
+        for i in range(np.size(z)):
+            l_x, l_y = ZtoX(i, X_map, S, J_num)
+            if l_y == J_num:  # 说明是ys
+                # 找到对应求所有的xij(s)之和
+                for j in range(J_num):
+                    if XtoZ(l_x, j, X_map, S, J_num) != -1:
+                        jac[i] += z[XtoZ(l_x, j, X_map, S, J_num)] * RHO[l_x][2]
+            else:  # 变量是xij
+                jac[i] = z[XtoZ(l_x, J_num, X_map, S, J_num)] * RHO[l_x][2]
+    return -jac
+
+
 # 对于s,xij=1
 def EqConstraint(z, s, X_map, I, ROH, S, J_num, load):
     o = 1
@@ -179,22 +214,6 @@ def gradient(z, X_map, S, J_num, alpha, beta):
             else:
                 jac[i] = beta * 1
     return jac
-
-
-# def gradient(z):
-#     """ Derivative of objective function """
-#
-#     jac = np.zeros_like(z)
-#     for i in range(np.size(z)):
-#         l_x, l_y = ZtoX(i, X_map, S, J_num)
-#         if l_y == J_num:  # 说明是ys
-#             jac[i] = -1 * alpha
-#         else:
-#             if l_y == I[l_x]:
-#                 jac[i] = 0
-#             else:
-#                 jac[i] = beta * 1
-#     return jac
 
 
 def gradient1(z, X_map, S, J_num, alpha, beta):
@@ -265,11 +284,16 @@ def opt(X_map, I, RHO, S, J_num, load, alpha, beta, type):
     cons = []
     for j in range(J_num):
         cons.append(
-            {'type': 'ineq', 'fun': lambda z, j=j: ResourceConstraint('down', z, j, X_map, I, RHO, S, J_num, load)})
+            {'type': 'ineq', 'fun': lambda z, j=j: ResourceConstraint('down', z, j, X_map, I, RHO, S, J_num, load),
+             'jac': lambda z, j=j: gradient_Constraint('down', z, j, X_map, I, RHO, S, J_num, load)})
         cons.append(
-            {'type': 'ineq', 'fun': lambda z, j=j: ResourceConstraint('up', z, j, X_map, I, RHO, S, J_num, load)})
+            {'type': 'ineq', 'fun': lambda z, j=j: ResourceConstraint('up', z, j, X_map, I, RHO, S, J_num, load),
+             'jac': lambda z, j=j: gradient_Constraint('up', z, j, X_map, I, RHO, S, J_num, load)
+             })
         cons.append(
-            {'type': 'ineq', 'fun': lambda z, j=j: ResourceConstraint('compute', z, j, X_map, I, RHO, S, J_num, load)})
+            {'type': 'ineq', 'fun': lambda z, j=j: ResourceConstraint('compute', z, j, X_map, I, RHO, S, J_num, load),
+             'jac': lambda z, j=j: gradient_Constraint('compute', z, j, X_map, I, RHO, S, J_num, load)
+             })
     for s in range(S):
         if np.max(X_map[s][0:J_num]) == 1:  # 已经选定了基站 todo(*风险点)
             continue
@@ -302,10 +326,6 @@ def opt(X_map, I, RHO, S, J_num, load, alpha, beta, type):
                                                                                        load, alpha, beta)
 
 
-def test(z):
-    return np.zeros_like(z)
-
-
 def opt1(X_map, I, RHO, S, J_num, load, alpha, beta, type):
     # 设置界
     bnd = (0, 1)
@@ -319,11 +339,16 @@ def opt1(X_map, I, RHO, S, J_num, load, alpha, beta, type):
     cons = []
     for j in range(J_num):
         cons.append(
-            {'type': 'ineq', 'fun': lambda z, j=j: ResourceConstraint('down', z, j, X_map, I, RHO, S, J_num, load)})
+            {'type': 'ineq', 'fun': lambda z, j=j: ResourceConstraint('down', z, j, X_map, I, RHO, S, J_num, load),
+             'jac': lambda z, j=j: gradient_Constraint('down', z, j, X_map, I, RHO, S, J_num, load)})
         cons.append(
-            {'type': 'ineq', 'fun': lambda z, j=j: ResourceConstraint('up', z, j, X_map, I, RHO, S, J_num, load)})
+            {'type': 'ineq', 'fun': lambda z, j=j: ResourceConstraint('up', z, j, X_map, I, RHO, S, J_num, load),
+             'jac': lambda z, j=j: gradient_Constraint('up', z, j, X_map, I, RHO, S, J_num, load)
+             })
         cons.append(
-            {'type': 'ineq', 'fun': lambda z, j=j: ResourceConstraint('compute', z, j, X_map, I, RHO, S, J_num, load)})
+            {'type': 'ineq', 'fun': lambda z, j=j: ResourceConstraint('compute', z, j, X_map, I, RHO, S, J_num, load),
+             'jac': lambda z, j=j: gradient_Constraint('compute', z, j, X_map, I, RHO, S, J_num, load)
+             })
     for s in range(S):
         if np.max(X_map[s][0:J_num]) == 1:  # 已经选定了基站 todo(*风险点)
             continue
@@ -454,13 +479,13 @@ def solve1(X_map, I, RHO, S, J_num, load, alpha, beta, type):
         z, cost_all, cost_d, cost_m = opt1(np.copy(X_map_this_loop), I, RHO, S, J_num, load, alpha, beta, type)
         # todo(*可以优化，比如设置大于一个阈值，就令xij=1)
         # 记录最大的xij，并令xij=1
-        # 记录最大的xij，并令xij=1
-        zz = z
+        zz = np.copy(z)
         for s in range(S):
-            zz[XtoZ(s, J_num, X_map, S, J_num)] = 0  # 将得到结果的ys置为0
+            zz[XtoZ(s, J_num, X_map, S, J_num)] = -1  # 将得到结果的ys置为-1,使得ys对应的变量不会被选做最大值
         max_z = np.max(zz)
         max_z_index = np.where(zz == max_z)  # 可能存在多个同时最大的
         max_z_index = max_z_index[0]
+
         for z_index in max_z_index:
             l_x, l_y = ZtoX(z_index, np.copy(X_map_this_loop), S, J_num)
             for j in range(J_num):
@@ -644,7 +669,7 @@ if __name__ == '__main__':
 
     # 参数4：基站的资源
     load = np.zeros((J_num, 3))  # 第一列是每个基站的down资源，第二列up资源，第三列compute资源
-    load += 3
+    load += 2
 
     # 参数5：切片参数，C_req_s_down,C_req_s_up,C_req_s_compute,随机生成
     RHO = slices(S)
@@ -669,7 +694,7 @@ if __name__ == '__main__':
     # 参数:9：生成切片调整因子K，RHO=K[i]*RHO
     K = generate_K(S, iter)
     print(K)
-    mu = 0.5
+    mu = 0.99
     print("方法1:凸优化")
     o1 = alg_optimize(S, J_num, X_map, load, RHO, I, ys, iter, K, mu)
     print(o1)
